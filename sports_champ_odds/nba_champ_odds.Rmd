@@ -1,16 +1,23 @@
+---
+title: "NBA Champ Odds"
+output: html_notebook
+---
+
+```{r echo=FALSE}
+suppressMessages(
+  suppressWarnings({
+    library(rvest)
+    library(stringr)
+    library(ggplot2)
+    library(ggiraph)
+    require(gridExtra)
+  } )
+)
+```
 
 
-# State of Sports
-# Compare the betting odds that each team will win the next championship across sports
 
-# Author: Jeremy Mobley
-
-
-library(rvest)
-library(stringr)
-library(ggplot2)
-require(gridExtra)
-
+```{r echo=FALSE}
 
 # function to scrape odds data from web into dataframe
 get_odds_data <- function(url, table_num=1){
@@ -18,7 +25,6 @@ get_odds_data <- function(url, table_num=1){
   tableguy <- html_nodes(webpage, xpath='//*[@class="table-wrapper cellTextNorm"]')
   return(data.frame(html_table(tableguy, fill=TRUE)[table_num]))
 }
-
 
 # function to convert odds column to probability
 convert_odds_to_prob <- function(df) {
@@ -35,7 +41,7 @@ convert_odds_to_prob <- function(df) {
 # function to plot team probabilities
 plot_team_probs <- function(df) {
   return(ggplot(data=df, aes(x = reorder(df$Team, X = df$prob), y = prob)) +
-           geom_bar(stat = "identity") + 
+           geom_bar_interactive(stat = "identity", aes(tooltip=Team)) + 
            geom_text(aes(label = Odds), hjust = -0.5, size = 3) + 
            labs(y = "Championship probability", x = "Team") + 
            #coord_flip(ylim = c(0, max(df$prob))))
@@ -60,15 +66,14 @@ nhl_site <- "http://www.vegasinsider.com/nhl/odds/futures/"
 ncaabb_site <- "http://www.vegasinsider.com/college-basketball/odds/futures/"
 
 
-# # plot all sports for comparison
-# nba_plot <- scrape_n_plot(nba_site,1)
-# mlb_plot <- scrape_n_plot(mlb_site,2)
-# nhl_plot <- scrape_n_plot(nhl_site,1)
-# nfl_plot <- scrape_n_plot(nfl_site,1)
-# 
-# plot_title <- paste0("Championship Probabilities by Sport for ", Sys.Date())
-# grid.arrange(nba_plot, mlb_plot, nhl_plot, nfl_plot, ncol=2, nrow=2, 
-#              top = plot_title)
+```
+
+```{r echo=FALSE}
+# plot all sports for comparison
+nba_plot <- scrape_n_plot(nba_site,1)
+ggiraph(print(nba_plot), width = 0.9)
+
+```
 
 
 
@@ -78,28 +83,6 @@ ncaabb_site <- "http://www.vegasinsider.com/college-basketball/odds/futures/"
 
 
 
-# Create process to grab data each day
-sports_list <- c("nba", "nhl", "nfl", "mlb")
-
-nba_data <- get_odds_data(nba_site)
-nba_data$sport <- "nba"
-
-nhl_data <- get_odds_data(nhl_site,1)
-nhl_data$sport <- "nhl"
-
-nfl_data <- get_odds_data(nfl_site)
-nfl_data$sport <- "nfl"
-
-mlb_data <- get_odds_data(mlb_site,1)
-mlb_data$sport <- "mlb"
-
-
-all_sports <- rbind(nba_data, nhl_data, mlb_data, nfl_data)
-
-file_name <- paste0("sports_odds_",substr(Sys.time(),0,10),".csv")
-
-setwd("C:/Users/Jeremy/Desktop/sports_odds")
-write.csv(all_sports, file_name, row.names=FALSE)
 
 
 
@@ -107,7 +90,34 @@ write.csv(all_sports, file_name, row.names=FALSE)
 
 
 
-########################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
