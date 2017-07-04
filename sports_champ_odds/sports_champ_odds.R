@@ -12,6 +12,16 @@ library(ggplot2)
 require(gridExtra)
 
 
+# links
+nba_site <- "http://www.vegasinsider.com/nba/odds/futures/"
+nfl_site <- "http://www.vegasinsider.com/nfl/odds/futures/"
+mlb_site <- "http://www.vegasinsider.com/mlb/odds/futures/"
+nhl_site <- "http://www.vegasinsider.com/nhl/odds/futures/"
+ncaabb_site <- "http://www.vegasinsider.com/college-basketball/odds/futures/"
+
+
+
+
 # function to scrape odds data from web into dataframe
 get_odds_data <- function(url, table_num=1){
   webpage <- read_html(url)
@@ -38,7 +48,6 @@ plot_team_probs <- function(df) {
            geom_bar(stat = "identity") + 
            geom_text(aes(label = Odds), hjust = -0.5, size = 3) + 
            labs(y = "Championship probability", x = "Team") + 
-           #coord_flip(ylim = c(0, max(df$prob))))
            coord_flip(ylim = c(0, 0.6)))
 }
 
@@ -52,25 +61,18 @@ scrape_n_plot <- function(website, table_num) {
 
 
 
-# links
-nba_site <- "http://www.vegasinsider.com/nba/odds/futures/"
-nfl_site <- "http://www.vegasinsider.com/nfl/odds/futures/"
-mlb_site <- "http://www.vegasinsider.com/mlb/odds/futures/"
-nhl_site <- "http://www.vegasinsider.com/nhl/odds/futures/"
-ncaabb_site <- "http://www.vegasinsider.com/college-basketball/odds/futures/"
-
 
 # # plot all sports for comparison
-# nba_plot <- scrape_n_plot(nba_site,1)
-# mlb_plot <- scrape_n_plot(mlb_site,2)
-# nhl_plot <- scrape_n_plot(nhl_site,1)
-# nfl_plot <- scrape_n_plot(nfl_site,1)
-# 
-# plot_title <- paste0("Championship Probabilities by Sport for ", Sys.Date())
-# grid.arrange(nba_plot, mlb_plot, nhl_plot, nfl_plot, ncol=2, nrow=2, 
-#              top = plot_title)
+nba_plot <- scrape_n_plot(nba_site,1)
+mlb_plot <- scrape_n_plot(mlb_site,1)
+nhl_plot <- scrape_n_plot(nhl_site,1)
+nfl_plot <- scrape_n_plot(nfl_site,1)
 
-
+plot_title <- paste0("Championship Probabilities by Sport for ", Sys.Date())
+grid.arrange(nba_plot, mlb_plot, nhl_plot, nfl_plot, ncol=2, nrow=2,
+             top = plot_title)
+  
+  
 
 
 
