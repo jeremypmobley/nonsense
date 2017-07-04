@@ -6,6 +6,8 @@ aws_s3_credentialsguy.py
 # Session Data files
 .RData
 .Rout
+.Rhistory
+
 
 # Picture files
 .png

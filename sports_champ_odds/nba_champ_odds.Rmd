@@ -1,0 +1,123 @@
+---
+title: "NBA Champ Odds"
+output: html_notebook
+---
+
+```{r echo=FALSE}
+suppressMessages(
+  suppressWarnings({
+    library(rvest)
+    library(stringr)
+    library(ggplot2)
+    library(ggiraph)
+    require(gridExtra)
+  } )
+)
+```
+
+
+
+```{r echo=FALSE}
+
+# function to scrape odds data from web into dataframe
+get_odds_data <- function(url, table_num=1){
+  webpage <- read_html(url)
+  tableguy <- html_nodes(webpage, xpath='//*[@class="table-wrapper cellTextNorm"]')
+  return(data.frame(html_table(tableguy, fill=TRUE)[table_num]))
+}
+
+# function to convert odds column to probability
+convert_odds_to_prob <- function(df) {
+  splits <- data.frame(str_split_fixed(df$Odds, "/", 2))
+  splits$X1 <- as.numeric(as.character(splits$X1))
+  splits$X2 <- as.numeric(as.character(splits$X2))
+  splits$prob <- splits$X2 / (splits$X1 + splits$X2)  
+  df$prob <- splits$prob
+  df[is.na(df$prob),"prob"] <- 0  # set any teams missing prob to 0
+  #df$prob <- df$prob / sum(df$prob)  # calculate probability from odds
+  return(df)
+}
+
+# function to plot team probabilities
+plot_team_probs <- function(df) {
+  return(ggplot(data=df, aes(x = reorder(df$Team, X = df$prob), y = prob)) +
+           geom_bar_interactive(stat = "identity", aes(tooltip=Team)) + 
+           geom_text(aes(label = Odds), hjust = -0.5, size = 3) + 
+           labs(y = "Championship probability", x = "Team") + 
+           #coord_flip(ylim = c(0, max(df$prob))))
+           coord_flip(ylim = c(0, 0.6)))
+}
+
+
+# wrapper function to scrape and plot one sport
+scrape_n_plot <- function(website, table_num) {
+  df <- get_odds_data(website, table_num)
+  df <- convert_odds_to_prob(df)
+  return(plot_team_probs(df))
+}
+
+
+
+# links
+nba_site <- "http://www.vegasinsider.com/nba/odds/futures/"
+nfl_site <- "http://www.vegasinsider.com/nfl/odds/futures/"
+mlb_site <- "http://www.vegasinsider.com/mlb/odds/futures/"
+nhl_site <- "http://www.vegasinsider.com/nhl/odds/futures/"
+ncaabb_site <- "http://www.vegasinsider.com/college-basketball/odds/futures/"
+
+
+```
+
+```{r echo=FALSE}
+# plot all sports for comparison
+nba_plot <- scrape_n_plot(nba_site,1)
+ggiraph(print(nba_plot), width = 0.9)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
