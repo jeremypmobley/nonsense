@@ -11,3 +11,5 @@ General repo for silly things and code that doesn't need its own repo
 		- Hard coded table subset in get_odds_data function
 		- MLB currently needs table 2 for MLB, table 1 is World Championship odds
 	- Example plot provided
+- Send happy text: A script to send a daily happy Twilio text
+
