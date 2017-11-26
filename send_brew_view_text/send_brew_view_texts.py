@@ -3,13 +3,13 @@
 
 import pandas as pd
 import twilio
-from twilio.rest import Client
+from twilio.rest import TwilioRestClient
 from bs4 import BeautifulSoup
 import urllib
 import time
 
 # import Twilio Credentials
-from twilio_credentialsguy import *
+from twilio_credentialsguy import ACCOUNT_SID, AUTH_TOKEN
 
 
 def remove_double_spaces(string):
@@ -35,7 +35,7 @@ def main():
 	brew_view_movies = get_brew_view_movies()
 	for i in range(len(brew_view_movies)):
 		message_body = "Brew & View is playing " + remove_double_spaces(brew_view_movies[i])
-		client = Client(ACCOUNT_SID, AUTH_TOKEN)
+		client = TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN)
 		client.messages.create(
 			to="+17045768532", 
 			from_="+13123132044", 
