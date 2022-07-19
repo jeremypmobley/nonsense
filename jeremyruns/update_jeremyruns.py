@@ -4,7 +4,7 @@ Script to update jeremyruns.com website
 Runs from local /Downloads folder
     - need to update read in data path to execute in other env
 
-Reads data in from csv in downloads folder
+Reads data in from csv in s3
 Writes html and png files to s3
 
 """
@@ -14,8 +14,6 @@ import pandas as pd
 import boto3
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-LOCAL_FILE_LOC = 'C:/Users/jerem/Downloads/Workout log - DailyRunLog.csv'
 
 
 def calc_runstats(df: pd.DataFrame, num_days_back):
@@ -116,7 +114,7 @@ def main():
 <html xmlns="http://www.w3.org/1999/xhtml" >
 <head>
     <title>jeremyruns.com</title>
-    <link rel="icon" type="image/png" src="s3://jeremyruns.com/favicon.png">
+    <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
 </head>
 <body>
     <h1>Welcome to jeremyruns.com</h1>
