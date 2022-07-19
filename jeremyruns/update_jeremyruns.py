@@ -1,14 +1,13 @@
 """
 Script to update jeremyruns.com website
 
-Runs from local /Downloads folder
-    - need to update read in data path to execute in other env
-
+Runs from local nonsense/jeremyruns directory path
 Reads data in from csv in s3
 Writes html and png files to s3
 
 """
 
+import os
 import datetime
 import pandas as pd
 import boto3
@@ -64,15 +63,20 @@ def create_last_run_text(df):
     return last_run_text
 
 
-def create_ma_over_time_chart(df: pd.DataFrame, num_days_back):
+def create_MA_over_time_chart_upload_s3(df, num_days_back, s3_resource_bucket):
     """ Function to create and save chart of MA over past num_days_back from df """
-    sns.set(rc={'figure.figsize': (10, 6)})
-    sns.scatterplot(data=df.tail(num_days_back), x="Date", y="Miles")
+    sns.set(rc={'figure.figsize':(15,10)})
+    sns.scatterplot(data=df.tail(num_days_back), x = "Date", y = "Miles")
     sns.lineplot(x='Date', y='value', hue='variable',
                  data=pd.melt(df.tail(num_days_back)[['Date', 'MA_30day', 'MA_10day']], 'Date'))
     plt.title(f'Last {num_days_back} days')
     plt.legend(['MA_30day', 'MA_10day'])
-    plt.savefig(f'last_{num_days_back}_days_MA_over_time.png')
+    file_name = f'last_{num_days_back}_days_MA_over_time.png'
+    plt.savefig(file_name)  # save png file locally
+    # upload to s3
+    s3_resource_bucket.upload_file(file_name, file_name, ExtraArgs={'ContentType': 'image/png'})
+    # remove local file
+    os.remove(file_name)
 
 
 def preprocess_raw_df(df_) -> pd.DataFrame:
@@ -147,24 +151,16 @@ def main():
     html_file.close()
 
     # Upload files to s3
-    s3_client = boto3.resource('s3')
-    bucket = s3_client.Bucket('jeremyruns.com')
+    s3_resource = boto3.resource('s3')
+    bucket = s3_resource.Bucket('jeremyruns.com')
 
     print('Upload index file')
     bucket.upload_file('index.html', 'index.html', ExtraArgs={'ContentType': 'text/html'})
 
-    print('Create image files locally')
-    create_ma_over_time_chart(df=df, num_days_back=31)
-    create_ma_over_time_chart(df=df, num_days_back=180)
-    create_ma_over_time_chart(df=df, num_days_back=365)
-
-    print('Upload image files')
-    bucket.upload_file('last_31_days_MA_over_time.png', 'last_31_days_MA_over_time.png',
-                       ExtraArgs={'ContentType': 'image/png'})
-    bucket.upload_file('last_180_days_MA_over_time.png', 'last_180_days_MA_over_time.png',
-                       ExtraArgs={'ContentType': 'image/png'})
-    bucket.upload_file('last_365_days_MA_over_time.png', 'last_365_days_MA_over_time.png',
-                       ExtraArgs={'ContentType': 'image/png'})
+    print('Create, upload image files to s3')
+    create_MA_over_time_chart_upload_s3(df=df, num_days_back=31, s3_resource_bucket=bucket)
+    create_MA_over_time_chart_upload_s3(df=df, num_days_back=180, s3_resource_bucket=bucket)
+    create_MA_over_time_chart_upload_s3(df=df, num_days_back=365, s3_resource_bucket=bucket)
 
 
 if __name__ == '__main__':
