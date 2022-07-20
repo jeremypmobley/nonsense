@@ -9,10 +9,10 @@
     <h1>Welcome to jeremyruns.com</h1>
 
     <h2>Last Run: (07/19) - 4.0 miles</h2>
+    
+    Updated as of (07/20)
 
-    Updated as of (07/19)
-
-    <h2>Last 30 days: 15 runs, 50.0% of days, 66.2 miles, 2.21 miles/day, 4.41 miles/run</h2>
+    <h2>Last 30 days: 14 runs, 46.7% of days, 62.2 miles, 2.07 miles/day, 4.44 miles/run </h2>
     <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_31_days_MA_over_time.png">
 
     <h2>Last 180 days: 82 runs, 45.6% of days, 420.2 miles, 2.33 miles/day, 5.12 miles/run</h2>
@@ -21,8 +21,54 @@
     <h2>Last 365 days: 148 runs, 40.5% of days, 720.9 miles, 1.98 miles/day, 4.87 miles/run</h2>
     <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_365_days_MA_over_time.png">
 
-    <h2>Last 3287 days: 1017 runs, 30.9% of days, 4885.6 miles, 1.49 miles/day, 4.8 miles/run</h2>
+
+    <h3>Total days of data tracked: 3288</h3>
+    <h3>Total miles run: 4885.6</h3>
+    
+    <form id="contact-form" class="post-reply" method="post">
+    
+       <span>Date</span>
+       <input id="form-date" class="input" type="text" name="date" placeholder="Date">
+
+       <span>Miles</span>
+       <input id="form-miles" class="input" type="text" name="miles" placeholder="Miles Run">
+
+       <textarea id="form-notes" class="input" name="notes" placeholder="Notes"></textarea>
+
+      <button class="primary-button" onClick="submitToAPI(event)">Submit</button>
+    </form>
 
 </body>
 </html>
+
+
+<script>
+  function invokeAWSAPI(e) {
+       e.preventDefault();           
+       var date = $("#form-date").val();
+       var miles = $("#form-miles").val();
+       var notes = $("#form-notes").val();
+       var data = {
+          date : date,
+          miles : miles,
+          notes : notes
+        };
+$.ajax({
+         type: "POST",
+         url : "https://*************.us-east-1.amazonaws.com/dev/contact-us",
+         dataType: "json",
+         crossDomain: "true",
+         contentType: "application/json; charset=utf-8",
+         data: JSON.stringify(data),
+         success: function () {
+           alert("Successful");
+           document.getElementById("contact-form").reset();
+       location.reload();
+         },
+         error: function () {
+           alert("unsuccessful");
+         }});
+     }
+ </script>
+ 
 
