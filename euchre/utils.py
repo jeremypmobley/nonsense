@@ -40,7 +40,8 @@ class EuchreGame:
         deck_of_cards = [value + '_' + suit for value in values for suit in suits]
         return deck_of_cards
 
-    def deal_hand(self):
+    def deal_hand(self,
+                  verbose=False):
         """
         Function to deal cards for hand
         Returns player_hands dict, card_flipped_up
@@ -59,6 +60,7 @@ class EuchreGame:
                 player_hands[player].append(dealt_card)
                 deck_of_cards.remove(dealt_card)
         card_flipped_up = deck_of_cards[0]
+        print(f'Card flipped up: {card_flipped_up}' if verbose else None)
         return player_hands, card_flipped_up
 
     @staticmethod
@@ -109,15 +111,13 @@ class EuchreGame:
             if self.eval_flipped_card(suit=card_flipped_up[-1],
                                       hand=player_hands[player]):
                 trump = card_flipped_up[-1]
-                if verbose:
-                    print(f'Player {player} has chosen {trump} as trump')
+                print(f'Player {player} has chosen {trump} as trump' if verbose else None)
                 return player, trump
         for player in self.next_to_deal:
             trump = self.choose_open_trump(hand=player_hands[player],
                                            card_flipped_up=card_flipped_up)
             if trump is not None:
-                if verbose:
-                    print(f'Player {player} has chosen {trump} as trump')
+                print(f'Player {player} has chosen {trump} as trump' if verbose else None)
                 return player, trump
         else:  # No "F the dealer"
             return None, None
@@ -126,6 +126,7 @@ class EuchreGame:
                   hand,
                   trump,
                   cards_in_play,
+                  cards_played_this_hand,
                   suit_led=None):
         """
         Function to return card to play in hand
@@ -149,6 +150,10 @@ class EuchreGame:
                 # 1 - play right bauer
                 if card[-1] == trump and card[0] == 'J':
                     return hand[idx]
+                # TODO: 1A - if right bauer played, play left bauer
+                right_bauer = 'J' + '_' + trump
+                if right_bauer in cards_played_this_hand:
+                    pass
                 # 2 - play off ace
                 elif card[-1] != trump:
                     if card[0] == 'A':
@@ -195,6 +200,7 @@ class EuchreGame:
                    player_hands,
                    trump,
                    next_to_play_list,
+                   cards_played_this_hand,
                    verbose=False):
         """
         Function to play one full trick
@@ -206,18 +212,19 @@ class EuchreGame:
             card_to_play = self.play_card(hand=player_hands[player],
                                           trump=trump,
                                           cards_in_play=cards_in_play,
+                                          cards_played_this_hand=cards_played_this_hand,
                                           suit_led=suit_led)
             # add card_to_play
             cards_in_play[player] = card_to_play
+            cards_played_this_hand.append(card_to_play)
             # update player hands after player has played card
             player_hands[player].remove(card_to_play)
-            if verbose:
-                print(f'Player {player} plays {card_to_play}', end=', ')
+            print(f'Player {player} plays {card_to_play}' if verbose else None, end=', ')
             if idx == 0:
                 suit_led = card_to_play[-1]
                 player_led = player
-        if verbose:
-            print(f'Cards in play: {cards_in_play}')
+        # print(f'Cards in play: {cards_in_play}' if verbose else None)
+        # print(f'Cards played this hand {cards_played_this_hand}' if verbose else None, end=', ')
         return cards_in_play, player_led
 
     def determine_trick_winner(self,
@@ -242,21 +249,23 @@ class EuchreGame:
             # if in cards_in_play:
             if trump_card in cards_in_play.values():
                 # return player that played that card
-                return [k for k, v in cards_in_play.items() if v == trump_card][0]
+                winning_player = [k for k, v in cards_in_play.items() if v == trump_card][0]
+                print(f'{winning_player} wins trick' if verbose else None)
+                return winning_player
         led_suit = cards_in_play[player_led][-1]
         for card_val in self.card_values:
             for card_played in cards_in_play.values():
                 if card_played[0] == card_val and card_played[-1] == led_suit:
                     # return player that played that card
                     winning_player = [k for k, v in cards_in_play.items() if v == card_played][0]
-                    if verbose:
-                        print(f'{winning_player} wins trick')
+                    print(f'{winning_player} wins trick' if verbose else None)
                     return winning_player
 
     # TODO: update this for loners
     def update_score(self,
                      trick_winners,
-                     calling_player):
+                     calling_player,
+                     verbose=False):
         """
         Update score for one hand given trick_winners and calling_player
         """
@@ -265,17 +274,23 @@ class EuchreGame:
         if calling_player in ['p1', 'p3']:
             if t1_tricks in [3, 4]:
                 self.score['t1'] += 1
+                print(f't1 scores 1' if verbose else None)
             elif t1_tricks == 5:
                 self.score['t1'] += 2
+                print(f't1 scores 2' if verbose else None)
             else:
                 self.score['t2'] += 2
+                print(f't2 scores 2' if verbose else None)
         if calling_player in ['p2', 'p4']:
             if t2_tricks in [3, 4]:
                 self.score['t2'] += 1
+                print(f't2 scores 1' if verbose else None)
             elif t2_tricks == 5:
                 self.score['t2'] += 2
+                print(f't2 scores 2' if verbose else None)
             else:
                 self.score['t1'] += 2
+                print(f't1 scores 2' if verbose else None)
 
     @staticmethod
     def get_next_trick_order(trick_winner) -> list:
@@ -291,25 +306,48 @@ class EuchreGame:
         if trick_winner == 'p4':
             return ['p4', 'p1', 'p2', 'p3']
 
+    def swap_dealer_card(self,
+                         card_flipped_up: str,
+                         dealer_hand: list,
+                         verbose=False) -> list:
+        """
+        Function to swap out ordered up trump card with one from dealer's hand
+        Returns: dealer new hand
+        """
+        # TODO: apply some strategy here - drop lowest non-trump card
+        # remove first card from dealer hand
+        removed_card = dealer_hand[0]
+        dealer_hand = dealer_hand[1:]
+        dealer_hand.append(card_flipped_up)
+        print(f'Dealer discards {removed_card} and picks up {card_flipped_up}' if verbose else None)
+        return dealer_hand
+
     def play_hand(self,
                   verbose=False):
         """
         Function to play a single hand
         """
         # deal cards
-        player_hands, card_flipped_up = self.deal_hand()
+        player_hands, card_flipped_up = self.deal_hand(verbose=verbose)
         # choose trump
         calling_player, trump = self.determine_trump(card_flipped_up=card_flipped_up,
                                                      player_hands=player_hands,
                                                      verbose=verbose)
 
         if trump is not None:
+            # check if trump called is same suit as card_flipped_up
+            if card_flipped_up[-1] == trump:
+                self.swap_dealer_card(card_flipped_up=card_flipped_up,
+                                      dealer_hand=player_hands[self.dealer],
+                                      verbose=verbose)
             trick_winners = {p: 0 for p in self.next_to_deal}
             next_to_play_list = self.next_to_deal
+            cards_played_this_hand = []
             for trick in range(5):
                 cards_in_play, player_led = self.play_trick(player_hands=player_hands,
                                                             trump=trump,
                                                             next_to_play_list=next_to_play_list,
+                                                            cards_played_this_hand=cards_played_this_hand,
                                                             verbose=verbose)
                 trick_winner = self.determine_trick_winner(cards_in_play=cards_in_play,
                                                            trump=trump,
@@ -317,20 +355,19 @@ class EuchreGame:
                                                            verbose=verbose)
                 trick_winners[trick_winner] += 1
                 next_to_play_list = self.get_next_trick_order(trick_winner)
-            if verbose:
-                print(f'Trick winners: {trick_winners}')
+            print(f'Trick winners: {trick_winners}' if verbose else None)
 
             # update score
             self.update_score(trick_winners=trick_winners,
-                              calling_player=calling_player)
+                              calling_player=calling_player,
+                              verbose=verbose)
             if verbose:
                 self.print_score()
 
             self.dealer = self.next_to_deal.pop(0)
             self.next_to_deal.append(self.dealer)
         else:
-            if verbose:
-                print('Trump not found')
+            print('Trump not found' if verbose else None)
             self.dealer = self.next_to_deal.pop(0)
             self.next_to_deal.append(self.dealer)
 
@@ -340,10 +377,9 @@ class EuchreGame:
         Play full game
         """
         while self.score['t1'] < 10 and self.score['t2'] < 10:
-            if verbose:
-                print(f'Hand #: {self.hands_played}', end='; ')
+            print(f'Hand #{self.hands_played}' if verbose else None, end='- ')
+            print(f'Dealer: {self.dealer}', end='; ')
             self.play_hand(verbose=verbose)
             self.hands_played += 1
 
-        if verbose:
-            print(f'Total hands played {self.hands_played}')
+        print(f'Total hands played {self.hands_played}' if verbose else None)
