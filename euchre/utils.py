@@ -9,6 +9,75 @@ def print_if_verbose(thing_to_print, verbose=False, **kwargs):
         print(thing_to_print, **kwargs)
 
 
+def return_off_suit(suit: str) -> str:
+    """
+    Function to return off-suit
+
+    :param: suit
+    :returns suit
+
+    """
+    if suit == 'H':
+        return 'D'
+    if suit == 'D':
+        return 'H'
+    if suit == 'C':
+        return 'S'
+    if suit == 'S':
+        return 'C'
+
+
+def play_random_card(hand,
+                     suit_led=None):
+    """
+    Function to play random card from hand
+    """
+    eligible_cards = []
+    if suit_led is not None:
+        for card in hand:
+            if card[-1] == suit_led:
+                eligible_cards.append(card)
+        if len(eligible_cards) > 0:
+            return np.random.choice(eligible_cards)
+        else:
+            return np.random.choice(hand)
+    else:
+        return np.random.choice(hand)
+
+
+def get_lowest_card(hand: list,
+                    suit: str = None):
+    """
+    Return lowest card in given suit or across all suits
+    """
+    card_values = {
+        '9': 1,
+        'T': 2,
+        'J': 3,
+        'Q': 4,
+        'K': 5,
+        'A': 6
+    }
+    card_to_play_points = 9
+    idx_to_return = -1
+    if suit is not None:
+        for idx, card in enumerate(hand):
+            if card[-1] == suit:  # if card is in given suit
+                card_points = card_values[card[0]]
+                if card_points < card_to_play_points:
+                    card_to_play_points = card_points
+                    idx_to_return = idx
+        if idx_to_return > -1:
+            return hand[idx_to_return]
+    else:
+        for idx, card in enumerate(hand):
+            card_points = card_values[card[0]]
+            if card_points < card_to_play_points:
+                card_to_play_points = card_points
+                idx_to_return = idx
+        return hand[idx_to_return]
+
+
 class EuchreGame:
     """
     Main class for euchre game
@@ -152,57 +221,6 @@ class EuchreGame:
         else:  # No "F the dealer"
             return None, None
 
-    def play_random_card(self,
-                         hand,
-                         suit_led=None):
-        """
-        Function to play random card from hand
-        """
-        eligible_cards = []
-        if suit_led is not None:
-            for card in hand:
-                if card[-1] == suit_led:
-                    eligible_cards.append(card)
-            if len(eligible_cards) > 0:
-                return np.random.choice(eligible_cards)
-            else:
-                return np.random.choice(hand)
-        else:
-            return np.random.choice(hand)
-
-    def get_lowest_card(self,
-                        hand,
-                        suit=None):
-        """
-        Return lowest card in given suit or across all suits
-        """
-        card_values = {
-            '9': 1,
-            'T': 2,
-            'J': 3,
-            'Q': 4,
-            'K': 5,
-            'A': 6
-        }
-        card_to_play_points = 9
-        idx_to_return = -1
-        if suit is not None:
-            for idx, card in enumerate(hand):
-                if card[-1] == suit:  # if card is in given suit
-                    card_points = card_values[card[0]]
-                    if card_points < card_to_play_points:
-                        card_to_play_points = card_points
-                        idx_to_return = idx
-            if idx_to_return > -1:
-                return hand[idx_to_return]
-        else:
-            for idx, card in enumerate(hand):
-                card_points = card_values[card[0]]
-                if card_points < card_to_play_points:
-                    card_to_play_points = card_points
-                    idx_to_return = idx
-            return hand[idx_to_return]
-
     def play_card(self,
                   hand,
                   trump,
@@ -215,14 +233,6 @@ class EuchreGame:
         Function to return card to play in hand
         # TODO: check if current winner is teammate or not
         """
-        card_values = {
-            '9': 1,
-            'T': 2,
-            'J': 3,
-            'Q': 4,
-            'K': 5,
-            'A': 6
-        }
         # play last card
         if len(hand) == 1:
             return hand[0]
@@ -250,19 +260,19 @@ class EuchreGame:
                                                                  trump=trump,
                                                                  player_led=player_led)
             # play the lowest card in the suit played
-            lowest_card_in_suit = self.get_lowest_card(hand=hand, suit=suit_led)
+            lowest_card_in_suit = get_lowest_card(hand=hand, suit=suit_led)
             if lowest_card_in_suit is not None:
                 print_if_verbose(f'Following suit', verbose=verbose, end='- ')
                 return lowest_card_in_suit
             # can't follow suit, play the lowest trump card
             else:
-                lowest_trump_card = self.get_lowest_card(hand=hand, suit=trump)
+                lowest_trump_card = get_lowest_card(hand=hand, suit=trump)
                 if lowest_trump_card is not None:
                     print_if_verbose(f'Lowest_trump_card', verbose=verbose, end='- ')
                     return lowest_trump_card
 
                 else:  # no trump, play the lowest card
-                    lowest_card_in_hand = self.get_lowest_card(hand=hand)
+                    lowest_card_in_hand = get_lowest_card(hand=hand)
                     print_if_verbose(f'Lowest_card_in_hand', verbose=verbose, end='- ')
                     return lowest_card_in_hand
 
@@ -287,8 +297,8 @@ class EuchreGame:
         player_led = None
         for idx, player in enumerate(next_to_play_list):
             if self.team_strategies[self.team_assignments[player]] == 'random':
-                card_to_play = self.play_random_card(hand=player_hands[player],
-                                                     suit_led=suit_led)
+                card_to_play = play_random_card(hand=player_hands[player],
+                                                suit_led=suit_led)
             else:
                 card_to_play = self.play_card(hand=player_hands[player],
                                               trump=trump,
@@ -318,8 +328,8 @@ class EuchreGame:
         Determine winner of trick
 
         :param cards_in_play: List of cards played this trick
-        :param trump: Trump called this trick
-        :param player_led: List of cards played this trick
+        :param trump: Trump called this hand
+        :param player_led: Player that led this trick
         :param verbose: True/False to print out log statements
         :returns Player that won trick
         """
@@ -362,26 +372,34 @@ class EuchreGame:
         """
         t1_tricks = trick_winners['p1'] + trick_winners['p3']
         t2_tricks = trick_winners['p2'] + trick_winners['p4']
+        hand_score = {'t1': 0, 't2': 0}
         if calling_player in ['p1', 'p3']:
             if t1_tricks in [3, 4]:
                 self.score['t1'] += 1
+                hand_score = {'t1': 1, 't2': 0}
                 print_if_verbose(f't1 scores 1', verbose=verbose)
             elif t1_tricks == 5:
                 self.score['t1'] += 2
+                hand_score = {'t1': 2, 't2': 0}
                 print_if_verbose(f't1 scores 2', verbose=verbose)
             else:
                 self.score['t2'] += 2
+                hand_score = {'t1': 0, 't2': 2}
                 print_if_verbose(f't2 scores 2', verbose=verbose)
         if calling_player in ['p2', 'p4']:
             if t2_tricks in [3, 4]:
                 self.score['t2'] += 1
+                hand_score = {'t1': 0, 't2': 1}
                 print_if_verbose(f't2 scores 1', verbose=verbose)
             elif t2_tricks == 5:
                 self.score['t2'] += 2
+                hand_score = {'t1': 0, 't2': 2}
                 print_if_verbose(f't2 scores 2', verbose=verbose)
             else:
                 self.score['t1'] += 2
+                hand_score = {'t1': 2, 't2': 0}
                 print_if_verbose(f't1 scores 2', verbose=verbose)
+        return hand_score
 
     @staticmethod
     def get_next_trick_order(trick_winner: str) -> list:
@@ -399,24 +417,6 @@ class EuchreGame:
             return ['p3', 'p4', 'p1', 'p2']
         if trick_winner == 'p4':
             return ['p4', 'p1', 'p2', 'p3']
-
-    @staticmethod
-    def return_off_suit(suit: str) -> str:
-        """
-        Function to return off-suit
-
-        :param: suit
-        :returns suit
-
-        """
-        if suit == 'H':
-            return 'D'
-        if suit == 'D':
-            return 'H'
-        if suit == 'C':
-            return 'S'
-        if suit == 'S':
-            return 'C'
 
     def swap_dealer_card(self,
                          card_flipped_up: str,
@@ -463,7 +463,8 @@ class EuchreGame:
         Applies deal_hand and determine_trump functions, then loops through play_trick 5 times and updates scores
 
         :param verbose: True/False to print out log statements
-        :returns None
+        :returns hand_results dict
+
         """
         hand_results = {}
         # deal cards
@@ -502,9 +503,10 @@ class EuchreGame:
             print_if_verbose(f'Trick winners: {trick_winners}', verbose=verbose)
 
             # update score
-            self.update_score(trick_winners=trick_winners,
-                              calling_player=calling_player,
-                              verbose=verbose)
+            hand_score = self.update_score(trick_winners=trick_winners,
+                                           calling_player=calling_player,
+                                           verbose=verbose)
+            hand_results['hand_score'] = hand_score
             if verbose:
                 self.print_score()
 
@@ -528,8 +530,9 @@ class EuchreGame:
             print_if_verbose(f'Hand #{self.hands_played}', verbose=verbose, end='- ')
             print_if_verbose(f'Dealer: {self.dealer}', verbose=verbose, end='; ')
             hand_results = self.play_hand(verbose=verbose)
-            all_hand_results.append(hand_results)
-            self.hands_played += 1
+            if hand_results is not None:
+                all_hand_results.append(hand_results)
+                self.hands_played += 1
 
         print_if_verbose(f'Total hands played {self.hands_played}', verbose=verbose)
         if return_all_hands_results:
