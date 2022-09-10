@@ -235,9 +235,11 @@ class EuchreGame:
     def play_lead_card(self,
                        hand,
                        trump,
-                       cards_played_this_hand):
+                       cards_played_this_hand,
+                       verbose=False):
         """
         Play lead card
+        :param verbose: True/False to print out log statements
         """
         trump_hierarchy_dict = {
             'D': ['J_D', 'J_H', 'A_D', 'K_D', 'Q_D', 'T_D', '9_D'],
@@ -256,6 +258,7 @@ class EuchreGame:
         for idx, card in enumerate(hand):
             # play the highest trump card remaining
             if card == highest_remaining_trump:
+                print_if_verbose(f'Leading off with highest trump', verbose=verbose, end='- ')
                 return card
             # find index of highest non-trump card
             elif card[-1] != trump:
@@ -264,8 +267,11 @@ class EuchreGame:
                     card_to_play_points = card_points
                     idx_to_return = idx
         if idx_to_return is not None:
+            print_if_verbose(f'Leading off with highest non-trump', verbose=verbose, end='- ')
             return hand[idx_to_return]
         else:
+            # TODO: check if card is trump before leading
+            print_if_verbose(f'Leading off with lowest overall card', verbose=verbose, end='- ')
             return get_lowest_card(hand)
 
     def play_card(self,
@@ -278,7 +284,9 @@ class EuchreGame:
                   verbose=False):
         """
         Function to return card to play in hand
-        # TODO: check if current winner is teammate or not
+
+        :param verbose: True/False to print out log statements
+
         """
         # play last card
         if len(hand) == 1:
@@ -287,10 +295,10 @@ class EuchreGame:
 
         # lead card
         if len(cards_in_play) < 1:
-            print_if_verbose(f'Leading off', verbose=verbose, end='- ')
             lead_card = self.play_lead_card(hand=hand,
                                             trump=trump,
-                                            cards_played_this_hand=cards_played_this_hand)
+                                            cards_played_this_hand=cards_played_this_hand,
+                                            verbose=verbose)
             return lead_card
 
         # follow suit
@@ -299,11 +307,12 @@ class EuchreGame:
                                                                  trump=trump,
                                                                  player_led=player_led)
             # print_if_verbose(f'Current winning player {current_winning_player}', verbose=verbose)
+            # TODO: check if current winner is teammate or not
 
             # play the lowest card in the suit played
             lowest_card_in_suit = get_lowest_card_in_suit(hand=hand, suit=suit_led)
             if lowest_card_in_suit is not None:
-                print_if_verbose(f'Following suit', verbose=verbose, end='- ')
+                print_if_verbose(f'Following suit with lowest card', verbose=verbose, end='- ')
                 return lowest_card_in_suit
             # can't follow suit, play the lowest trump card
             else:
@@ -356,7 +365,11 @@ class EuchreGame:
             # update player hands after player has played card
             player_hands[player].remove(card_to_play)
             if idx == 0:
-                suit_led = card_to_play[-1]
+                # switch suit led to trump for left bauer
+                if return_off_suit(card_to_play) == trump and card_to_play[0] == 'J':
+                    suit_led = trump
+                else:
+                    suit_led = card_to_play[-1]
                 player_led = player
         return cards_in_play, player_led
 
