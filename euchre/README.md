@@ -15,3 +15,4 @@ Given the cards in a players hand (and position at the table), what is the likel
 ### Future Ideas:
 * Streamlit app where user can select cards in hand and table position and get breakdown of likelihood of taking 5/4/3/2/1/0 tricks
 * Genetic Algorithm to determine next play would be cool - start with random strategy, adapt to new weights as games progress
+* PySimpleGUI to play game
