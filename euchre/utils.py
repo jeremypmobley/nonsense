@@ -9,48 +9,28 @@ def print_if_verbose(thing_to_print, verbose=False, **kwargs):
         print(thing_to_print, **kwargs)
 
 
-def is_teammate(given_player:str, maybe_teammate:str):
+def get_teammate(player: str) -> str:
     """
-    Returns True/False
+    Function to return teammate of player
+    :param: player
+    :returns player
     """
-    if given_player == 'p1':
-        if maybe_teammate == 'p3':
-            return True
-        else:
-            return False
-    if given_player == 'p2':
-        if maybe_teammate == 'p4':
-            return True
-        else:
-            return False
-    if given_player == 'p3':
-        if maybe_teammate == 'p1':
-            return True
-        else:
-            return False
-    if given_player == 'p4':
-        if maybe_teammate == 'p2':
-            return True
-        else:
-            return False
+    if player == 'p1': return 'p3'
+    if player == 'p2': return 'p4'
+    if player == 'p3': return 'p1'
+    if player == 'p4': return 'p2'
 
 
 def return_off_suit(suit: str) -> str:
     """
     Function to return off-suit given suit
-
     :param: suit
     :returns suit
-
     """
-    if suit == 'H':
-        return 'D'
-    if suit == 'D':
-        return 'H'
-    if suit == 'C':
-        return 'S'
-    if suit == 'S':
-        return 'C'
+    if suit == 'H': return 'D'
+    if suit == 'D': return 'H'
+    if suit == 'C': return 'S'
+    if suit == 'S': return 'C'
 
 
 def play_random_card(hand,
@@ -143,48 +123,7 @@ def get_lowest_nontrump_card_in_suit(hand, suit):
         return hand[idx_to_return]
 
 
-# TODO: add parameter for is_trump, loop through trump_hierarchy dict
-def get_lowest_card_in_suit(hand: list,
-                            suit: str = None,
-                            is_trump: bool = False):
-    """
-    Return lowest card in given suit
-    Returns None if no card in given suit
-    """
-    trump_hierarchy_dict = {
-        'D': ['J_D', 'J_H', 'A_D', 'K_D', 'Q_D', 'T_D', '9_D'],
-        'H': ['J_H', 'J_D', 'A_H', 'K_H', 'Q_H', 'T_H', '9_H'],
-        'C': ['J_C', 'J_S', 'A_C', 'K_C', 'Q_C', 'T_C', '9_C'],
-        'S': ['J_S', 'J_C', 'A_S', 'K_S', 'Q_S', 'T_S', '9_S']
-    }
-    CARD_VALUES = {
-        'A': 6,
-        'K': 5,
-        'Q': 4,
-        'J': 3,
-        'T': 2,
-        '9': 1,
-    }
-    if is_trump:
-        pass
-        # loop through trump_hierarchy_dict - reverse order
-        # for card in trump_hierarchy_dict[suit].reverse():
-            # if card[-1] == suit:
-                # return card
-    card_to_play_points = 9
-    idx_to_return = -1
-    if suit is not None:  # TODO: this should always be true
-        for idx, card in enumerate(hand):
-            if card[-1] == suit:  # if card is in given suit
-                card_points = CARD_VALUES[card[0]]
-                if card_points < card_to_play_points:
-                    card_to_play_points = card_points
-                    idx_to_return = idx
-        if idx_to_return > -1:
-            return hand[idx_to_return]
-
-
-# TODO: get rid of this and use get_lowest_card_in_suit once best suits are identified to lay off
+# TODO: get rid of this and use get_lowest_nontrump_card_in_suit OR get_lowest_trump_card
 def get_lowest_card(hand: list):
     """
     Return lowest card in hand across all suits
@@ -279,10 +218,6 @@ class EuchreGame:
         self.tm_play_card_strategy = tm_play_card_strategy
         self.tm_call_trump_strategy = tm_call_trump_strategy
 
-    def print_score(self):
-        """ Print current score of game """
-        print(f"Current score: {self.score['t1']}-{self.score['t2']}")
-
     @staticmethod
     def shuffle_deck_of_cards() -> list:
         """
@@ -332,20 +267,26 @@ class EuchreGame:
         if self.tm_call_trump_strategy[self.team_assignments[player]] == 'always':
             return True
 
-        # Never order up Jack if not dealer - this appears to be a bad strategy
+        # # Never order up Jack if not dealer - this appears to be a bad strategy
         # if self.tm_call_trump_strategy[self.team_assignments[player]] == 'NEW':
         #     if player != self.dealer and card_flipped_up[0] == 'J':
         #         return False
 
+        trumps = 0
+        for card in hand:
+            if card[-1] == suit:
+                trumps += 1
+
+        # pick up Jack if dealer and 2 trumps
+        # if self.tm_call_trump_strategy[self.team_assignments[player]] == 'NEW':
+        if player == self.dealer and card_flipped_up[0] == 'J' and trumps >= 2:
+            return True
+
+        # if 3 or more trumps
+        if trumps >= 3:
+            return True
         else:
-            trumps = 0
-            for card in hand:
-                if card[-1] == suit:
-                    trumps += 1
-            if trumps >= 3:
-                return True
-            else:
-                return False
+            return False
 
     # TODO: move this out of class method, pass in player/position/strategy to play
     def choose_open_trump(self,
@@ -387,18 +328,14 @@ class EuchreGame:
         :returns calling player, trump suit
         """
         for player in self.next_to_deal:
-            # TODO: should self be passed in here???
-            if self.eval_flipped_card(self,
-                                      hand=player_hands[player],
+            if self.eval_flipped_card(hand=player_hands[player],
                                       player=player,
                                       card_flipped_up=card_flipped_up):
                 trump = card_flipped_up[-1]
                 print_if_verbose(f'Player {player} has chosen {trump} as trump', verbose=verbose)
                 return player, trump
         for player in self.next_to_deal:
-            # TODO: should self be passed in here???
-            trump = self.choose_open_trump(self,
-                                           hand=player_hands[player],
+            trump = self.choose_open_trump(hand=player_hands[player],
                                            player=player,
                                            card_flipped_up=card_flipped_up)
             if trump is not None:
@@ -411,6 +348,7 @@ class EuchreGame:
                        hand,
                        trump,
                        cards_played_this_hand,
+                       unplayed_trump_this_hand,
                        verbose=False):
         """
         Play lead card
@@ -421,13 +359,18 @@ class EuchreGame:
         :param verbose: True/False to print out log statements
 
         """
-        # identify highest overall un-played trump card - should this be kept at the hand level?
-        highest_remaining_trump = find_highest_remaining_trump(trump=trump,
-                                                               cards_played_this_hand=cards_played_this_hand)
-        # play the highest trump card remaining
-        if highest_remaining_trump in hand:
-            print_if_verbose(f'Leading off with highest trump card remaining', verbose=verbose)
-            return highest_remaining_trump
+        # # identify highest overall un-played trump card - should this be kept at the hand level?
+        # highest_remaining_trump = find_highest_remaining_trump(trump=trump,
+        #                                                        cards_played_this_hand=cards_played_this_hand)
+        # # play the highest trump card remaining
+        # if highest_remaining_trump in hand:
+        #     print_if_verbose(f'Leading with highest trump card remaining', verbose=verbose, end='- ')
+        #     return highest_remaining_trump
+        if unplayed_trump_this_hand[0] in hand:
+            print_if_verbose(f'Leading with highest trump card remaining', verbose=verbose, end='- ')
+            print_if_verbose(f'Trump cards remaining {unplayed_trump_this_hand}', verbose=verbose, end='- ')
+            return unplayed_trump_this_hand[0]
+
         # TODO: check if opponents don't have any trump left, play any trump in hand
 
         # TODO: update this to be of suit least played so far in case of ties, or to partners short-suit
@@ -435,12 +378,12 @@ class EuchreGame:
         # play highest non-trump
         highest_non_trump = get_highest_nontrump_card(hand=hand, trump=trump)
         if highest_non_trump is not None:
-            print_if_verbose(f'Leading off with highest non-trump', verbose=verbose, end='- ')
+            print_if_verbose(f'Leading with highest non-trump', verbose=verbose, end='- ')
             return highest_non_trump
         else:  # only trump left in hand
             lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
             if lowest_trump_card is not None:
-                print_if_verbose(f'Only trump left, Leading off with lowest trump', verbose=verbose, end='- ')
+                print_if_verbose(f'Leading with lowest trump (only trump left)', verbose=verbose, end='- ')
                 return lowest_trump_card
 
     def play_card(self,
@@ -450,6 +393,7 @@ class EuchreGame:
                   cards_in_play,
                   player_led,
                   cards_played_this_hand,
+                  unplayed_trump_this_hand,
                   suit_led=None,
                   verbose=False):
         """
@@ -475,6 +419,7 @@ class EuchreGame:
             lead_card = self.play_lead_card(hand=hand,
                                             trump=trump,
                                             cards_played_this_hand=cards_played_this_hand,
+                                            unplayed_trump_this_hand=unplayed_trump_this_hand,
                                             verbose=verbose)
             return lead_card
 
@@ -485,27 +430,37 @@ class EuchreGame:
                                                                  trump=trump,
                                                                  player_led=player_led)
             print_if_verbose(f'Current winning player {current_winning_player}', verbose=verbose)
-            # teammate winning - always defer to teammate
-            if is_teammate(given_player=player, maybe_teammate=current_winning_player):
-                # play the lowest card in the suit played
+
+            # teammate winning
+            if get_teammate(player) == current_winning_player:
+                # trump led
                 if suit_led == trump:
+                    # play lowest trump card
                     lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
                     if lowest_trump_card is not None:
                         print_if_verbose(f'Teammate winning, following suit w/ lowest trump card', verbose=verbose, end='- ')
                         return lowest_trump_card
+                    else:
+                        lowest_card_in_hand = get_lowest_card(hand=hand)
+                        print_if_verbose(f'Teammate winning, no trump, play lowest card', verbose=verbose, end='- ')
+                        return lowest_card_in_hand
                 else:
                     # play lowest card in suit led
                     lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led)
                     if lowest_card_in_suit is not None:
                         print_if_verbose(f'Teammate winning, following suit w/ lowest card', verbose=verbose, end='- ')
                         return lowest_card_in_suit
-                    # TODO: update get_lowest_card to play card that shorts suits
-                    lowest_card_in_hand = get_lowest_card(hand=hand)
-                    print_if_verbose(f'Teammate winning, no follow suit, play lowest card', verbose=verbose, end='- ')
-                    return lowest_card_in_hand
+                    # TODO: update to get_lowest_nontrump_card_in_suit in suit that shorts suits hand or is lowest played overall
+                    # TODO: make sure this isn't trump to overtrump teammate
+                    # play lowest card in hand
+                    else:
+                        lowest_card_in_hand = get_lowest_card(hand=hand)
+                        print_if_verbose(f'Teammate winning, no follow suit, play lowest card', verbose=verbose, end='- ')
+                        return lowest_card_in_hand
             # teammate not winning
             else:
                 # TODO: check if player has a card that can win
+                # trump led
                 if suit_led == trump:
                     lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
                     if lowest_trump_card is not None:
@@ -518,6 +473,7 @@ class EuchreGame:
                 else:
                     # TODO: check if player has a card that can win
                     # play the lowest card in the suit played
+                    # TODO: BUG: left bauer trump cards are being played here
                     lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led)
                     if lowest_card_in_suit is not None:
                         print_if_verbose(f'Following suit with lowest non-trump card', verbose=verbose, end='- ')
@@ -538,6 +494,7 @@ class EuchreGame:
                    trump,
                    next_to_play_list,
                    cards_played_this_hand,
+                   unplayed_trump_this_hand,
                    verbose=False):
         """
         Function to play one full trick
@@ -563,10 +520,13 @@ class EuchreGame:
                                               cards_in_play=cards_in_play,
                                               player_led=player_led,
                                               cards_played_this_hand=cards_played_this_hand,
+                                              unplayed_trump_this_hand=unplayed_trump_this_hand,
                                               suit_led=suit_led,
                                               verbose=verbose)
 
             print_if_verbose(f'Player {player} plays {card_to_play}', verbose=verbose, end=', ')
+            if card_to_play[-1] == trump:
+                unplayed_trump_this_hand.remove(card_to_play)
             # add card_to_play
             cards_in_play[player] = card_to_play
             cards_played_this_hand.append(card_to_play)
@@ -719,6 +679,12 @@ class EuchreGame:
         :returns hand_results dict
 
         """
+        trump_hierarchy_dict = {
+            'D': ['J_D', 'J_H', 'A_D', 'K_D', 'Q_D', 'T_D', '9_D'],
+            'H': ['J_H', 'J_D', 'A_H', 'K_H', 'Q_H', 'T_H', '9_H'],
+            'C': ['J_C', 'J_S', 'A_C', 'K_C', 'Q_C', 'T_C', '9_C'],
+            'S': ['J_S', 'J_C', 'A_S', 'K_S', 'Q_S', 'T_S', '9_S']
+        }
         hand_results = {}
         # deal cards
         player_hands, card_flipped_up = self.deal_hand(verbose=verbose)
@@ -735,18 +701,20 @@ class EuchreGame:
                 self.swap_dealer_card(card_flipped_up=card_flipped_up,
                                       dealer_hand=player_hands[self.dealer],
                                       verbose=verbose)
-            # hand_results['player_hands'] = player_hands
             hand_results['calling_player'] = calling_player
             hand_results['trump'] = trump
             hand_results['dealer'] = self.dealer
             trick_winners = {p: 0 for p in self.next_to_deal}
             next_to_play_list = self.next_to_deal
             cards_played_this_hand = []
+            unplayed_trump_this_hand = trump_hierarchy_dict[trump]
             for trick in range(5):
+                print_if_verbose(f'Trick {trick}', verbose=verbose, end=': ')
                 cards_in_play, player_led = self.play_trick(player_hands=player_hands,
                                                             trump=trump,
                                                             next_to_play_list=next_to_play_list,
                                                             cards_played_this_hand=cards_played_this_hand,
+                                                            unplayed_trump_this_hand=unplayed_trump_this_hand,
                                                             verbose=verbose)
                 trick_winner = self.determine_trick_winner(cards_in_play=cards_in_play,
                                                            trump=trump,
@@ -762,8 +730,6 @@ class EuchreGame:
                                            calling_player=calling_player,
                                            verbose=verbose)
             hand_results['hand_score'] = hand_score
-            if verbose:
-                self.print_score()
 
             self.dealer = self.next_to_deal.pop(0)
             self.next_to_deal.append(self.dealer)
