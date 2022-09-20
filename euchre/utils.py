@@ -9,7 +9,7 @@ def print_if_verbose(thing_to_print, verbose=False, **kwargs):
         print(thing_to_print, **kwargs)
 
 
-# TODO: convert this to a dict lookup
+# TODO: convert this to a dict lookup?
 def get_teammate(player: str) -> str:
     """
     Function to return teammate of player
@@ -26,7 +26,7 @@ def get_teammate(player: str) -> str:
         return 'p2'
 
 
-# TODO: convert this to a dict lookup
+# TODO: convert this to a dict lookup?
 def return_off_suit(suit: str) -> str:
     """
     Function to return off-suit given suit
@@ -105,7 +105,8 @@ def get_lowest_trump_card(hand: list, trump: str):
 
 
 def get_lowest_nontrump_card_in_suit(hand: list,
-                                     suit: str):
+                                     suit: str,
+                                     trump: str):
     """
     Function to return lowest non-trump card in suit from given hand
     Returns None if no cards found in suit
@@ -121,6 +122,8 @@ def get_lowest_nontrump_card_in_suit(hand: list,
     card_to_play_points = 9
     idx_to_return = None
     for idx, card in enumerate(hand):
+        if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):
+            continue
         if card[-1] == suit:  # if card is in given suit
             card_points = card_values[card[0]]
             if card_points < card_to_play_points:
@@ -130,34 +133,10 @@ def get_lowest_nontrump_card_in_suit(hand: list,
         return hand[idx_to_return]
 
 
-# TODO: get rid of this and use get_lowest_nontrump_card_in_suit OR get_lowest_trump_card
-def get_lowest_card(hand: list):
-    """
-    Return lowest card in hand across all suits
-    """
-    card_values = {
-        'A': 6,
-        'K': 5,
-        'Q': 4,
-        'J': 3,
-        'T': 2,
-        '9': 1,
-    }
-    card_to_play_points = 9
-    idx_to_return = 0
-    for idx, card in enumerate(hand):
-        card_points = card_values[card[0]]
-        if card_points < card_to_play_points:
-            card_to_play_points = card_points
-            idx_to_return = idx
-    return hand[idx_to_return]
-
-
 def get_lowest_nontrump_card_in_hand(hand: list,
                                      trump: str,
                                      cards_played_this_hand: list,
-                                     no_trump_in_hand=False,
-                                     verbose=False):
+                                     no_trump_in_hand=False):
     """
     Function to return the lowest nontrump card overall in hand
     Return None if only trump cards remain in hand - must pass in no_trump_in_hand
@@ -228,7 +207,7 @@ def get_lowest_nontrump_card_in_hand(hand: list,
                 suit_to_play = hand[idx_to_return][-1]
             else:
                 suit_to_play = short_suits[0]
-            return get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_to_play)
+            return get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_to_play, trump=trump)
 
         else:  # play card that can take fewest other cards
             idx_to_return = 0
@@ -312,18 +291,9 @@ def swap_dealer_card(card_flipped_up: str,
     else:
         suit_to_play = short_suits[0]
 
-    # find the lowest card in suit to short
-    # TODO: replace this with get_lowest_nontrump_card_in_suit function
-    card_to_play_points = 9
-    idx_to_return = 0
-    for idx, card in enumerate(dealer_hand):
-        if card[-1] == suit_to_play and not (return_off_suit(card[-1]) == card_flipped_up[-1] and card[0] == 'J'):
-            card_points = card_values[card[0]]
-            if card_points < card_to_play_points:
-                card_to_play_points = card_points
-                idx_to_return = idx
+    # find the lowest nontrump card in suit to short
+    removed_card = get_lowest_nontrump_card_in_suit(hand=dealer_hand, suit=suit_to_play, trump=card_flipped_up[-1])
 
-    removed_card = dealer_hand[idx_to_return]
     dealer_hand.remove(removed_card)
     dealer_hand.append(card_flipped_up)
     print_if_verbose(f'Dealer discards {removed_card} and picks up {card_flipped_up}', verbose=verbose)
@@ -614,7 +584,8 @@ class EuchreGame:
                         return lowest_card_in_hand
                 else:  # trump not led
                     # play lowest card in suit led
-                    lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led)
+                    # TODO: check likelihood that teammate will win trick with current card, maybe overtake partner
+                    lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led, trump=trump)
                     if lowest_card_in_suit is not None:
                         print_if_verbose(f'Teammate winning, following suit w/ lowest card', verbose=verbose, end='- ')
                         return lowest_card_in_suit
@@ -641,7 +612,7 @@ class EuchreGame:
                     if lowest_trump_card is not None:
                         print_if_verbose(f'Following suit with lowest trump card', verbose=verbose, end='- ')
                         return lowest_trump_card
-                    else:  # play card in hand with lowest chance of taking trick
+                    else:  # play card in hand with lowest chance of taking trick later
                         lowest_card_in_hand = get_lowest_nontrump_card_in_hand(hand=hand,
                                                                                trump=trump,
                                                                                cards_played_this_hand=cards_played_this_hand,
@@ -649,15 +620,15 @@ class EuchreGame:
                         print_if_verbose(f'No trump, playing lowest card in hand', verbose=verbose, end='- ')
                         return lowest_card_in_hand
                 else:  # suit led not trump
-                    # TODO: check if player has a card that can win
+                    # TODO: check if player has a nontrump card that can win
                     # TODO: BUG: left bauer trump cards are being played here
                     # play the lowest card in the suit played
-                    lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led)
+                    lowest_card_in_suit = get_lowest_nontrump_card_in_suit(hand=hand, suit=suit_led, trump=trump)
                     if lowest_card_in_suit is not None:
                         print_if_verbose(f'Following suit with lowest non-trump card', verbose=verbose, end='- ')
                         return lowest_card_in_suit
-                    # try to play lowest trump card
-                    # TODO: check what trump cards have been played, if player can out-trump
+                    # play lowest trump card
+                    # TODO: check if player has a trump card that can win out-trump other cards that have been played
                     lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
                     if lowest_trump_card is not None:
                         print_if_verbose(f'Lowest trump card', verbose=verbose, end='- ')
@@ -879,8 +850,10 @@ class EuchreGame:
                 swap_dealer_card(card_flipped_up=card_flipped_up, dealer_hand=player_hands[self.dealer],
                                  verbose=verbose)
             hand_results['calling_player'] = calling_player
+            hand_results['card_flipped_up'] = card_flipped_up
             hand_results['trump'] = trump
             hand_results['dealer'] = self.dealer
+            hand_results['next_to_deal'] = self.next_to_deal
             trick_winners = {p: 0 for p in self.next_to_deal}
             next_to_play_list = self.next_to_deal
             cards_played_this_hand = []
