@@ -17,8 +17,92 @@ import pandas as pd
 import sys
 import joblib
 
-sys.path.insert(0, 'C:/Users/jerem/Desktop/nonsense/euchre')
+# sys.path.insert(0, 'C:/Users/jerem/Desktop/nonsense/euchre')
 # from utils import *
+
+
+def translate_st_input_to_df(trump,
+                             a_s=False, k_s=False, q_s=False, j_s=False, t_s=False, nine_s=False,
+                             a_c=False, k_c=False, q_c=False, j_c=False, t_c=False, nine_c=False,
+                             a_d=False, k_d=False, q_d=False, j_d=False, t_d=False, nine_d=False,
+                             a_h=False, k_h=False, q_h=False, j_h=False, t_h=False, nine_h=False
+                             ):
+    """
+    Function to take in checkbox inputs and return
+
+    :return dataframe
+    """
+    model_features = ['has_right', 'has_left',
+                      'has_Atrump', 'has_Ktrump', 'has_Qtrump', 'has_Ttrump', 'has_9trump',
+                      'num_off_A', 'num_off_K', 'num_off_Q'
+                      ]
+    hand = {feature: [0] for feature in model_features}
+    df = pd.DataFrame(hand)
+    if trump == 'SPADES':
+        if a_s:
+            df['has_Atrump'] = 1
+        if k_s:
+            df['has_Ktrump'] = 1
+        if q_s:
+            df['has_Qtrump'] = 1
+        if j_s:
+            df['has_right'] = 1
+        if t_s:
+            df['has_Ttrump'] = 1
+        if nine_s:
+            df['has_9trump'] = 1
+        if j_c:
+            df['has_left'] = 1
+
+    if trump == 'CLUBS':
+        if a_c:
+            df['has_Atrump'] = 1
+        if k_c:
+            df['has_Ktrump'] = 1
+        if q_c:
+            df['has_Qtrump'] = 1
+        if j_c:
+            df['has_right'] = 1
+        if t_c:
+            df['has_Ttrump'] = 1
+        if nine_c:
+            df['has_9trump'] = 1
+        if j_s:
+            df['has_left'] = 1
+
+    if trump == 'DIAMONDS':
+        if a_d:
+            df['has_Atrump'] = 1
+        if k_d:
+            df['has_Ktrump'] = 1
+        if q_d:
+            df['has_Qtrump'] = 1
+        if j_d:
+            df['has_right'] = 1
+        if t_d:
+            df['has_Ttrump'] = 1
+        if nine_d:
+            df['has_9trump'] = 1
+        if j_h:
+            df['has_left'] = 1
+
+    if trump == 'HEARTS':
+        if a_h:
+            df['has_Atrump'] = 1
+        if k_h:
+            df['has_Ktrump'] = 1
+        if q_h:
+            df['has_Qtrump'] = 1
+        if j_h:
+            df['has_right'] = 1
+        if t_h:
+            df['has_Ttrump'] = 1
+        if nine_h:
+            df['has_9trump'] = 1
+        if j_d:
+            df['has_left'] = 1
+
+    return df
 
 
 def bar_chart(expected_tricks_taken):
@@ -89,27 +173,23 @@ def main():
         submit_button = st.form_submit_button(label='Evaluate Hand')
 
     if submit_button:
+
+        # TODO: add check to make sure exactly 5 cards selected
+
         st.text(f'Trump chosen: {select_trump}; Player table position: {player_position}')
-        if k_s:
-            st.text('K_S')
-
-        model_features = ['has_right', 'has_left',
-                          'has_Atrump', 'has_Ktrump', 'has_Qtrump', 'has_Ttrump', 'has_9trump',
-                          'num_off_A', 'num_off_K', 'num_off_Q'
-                          ]
-        hand = {feature: [0] for feature in model_features}
-        single_hand_test_df = pd.DataFrame(hand)
-        single_hand_test_df['has_right'] = 0
-        single_hand_test_df['has_left'] = 0
-        single_hand_test_df['num_off_Q'] = 1
-        single_hand_test_df['num_off_K'] = 0
-        single_hand_test_df['num_off_A'] = 2
+        # load model
         model = joblib.load('C:/Users/jerem/Desktop/nonsense/euchre/models/trick_model_rf_v0.sav')
-        single_hand_preds = model.predict_proba(single_hand_test_df)
+        # translate inputs into dataframe
+        hand_df = translate_st_input_to_df(trump=select_trump,
+                                           a_s=a_s, k_s=k_s, q_s=q_s, j_s=j_s, t_s=t_s, nine_s=nine_s,
+                                           a_c=a_c, k_c=k_c, q_c=q_c, j_c=j_c, t_c=t_c, nine_c=nine_c,
+                                           a_d=a_d, k_d=k_d, q_d=q_d, j_d=j_d, t_d=t_d, nine_d=nine_d,
+                                           a_h=a_h, k_h=k_h, q_h=q_h, j_h=j_h, t_h=t_h, nine_h=nine_h)
+        # create model preds
+        hand_preds = model.predict_proba(hand_df)
+        st.text(hand_preds)
 
-        st.text(single_hand_preds)
-
-        bar_chart(expected_tricks_taken=single_hand_preds.tolist()[0])
+        bar_chart(expected_tricks_taken=hand_preds.tolist()[0])
 
     # DEV MODE - check current session state
     # st.write(f'Session State: {st.session_state}')
