@@ -14,9 +14,9 @@ https://docs.streamlit.io/library/api-reference/session-state
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
-import sys
 import joblib
 
+# import sys
 # sys.path.insert(0, 'C:/Users/jerem/Desktop/nonsense/euchre')
 # from utils import *
 
@@ -105,6 +105,15 @@ def translate_st_input_to_df(trump,
     return df
 
 
+# TODO: implement this
+def count_suits_st_input(trump: str):
+    """
+    :return int of number of suits
+    """
+    suits = set()
+    return len(suits)
+
+
 def bar_chart(expected_tricks_taken):
     num_tricks_taken = ['0 - zero', '1 - one', '2 - two', '3 - three', '4 - four', '5 - five']
     fig = plt.figure(figsize = (10, 5))
@@ -185,6 +194,9 @@ def main():
                                            a_c=a_c, k_c=k_c, q_c=q_c, j_c=j_c, t_c=t_c, nine_c=nine_c,
                                            a_d=a_d, k_d=k_d, q_d=q_d, j_d=j_d, t_d=t_d, nine_d=nine_d,
                                            a_h=a_h, k_h=k_h, q_h=q_h, j_h=j_h, t_h=t_h, nine_h=nine_h)
+        hand_df['player_seat'] = player_position
+        hand_df['num_suits'] = count_suits_st_input(trump=select_trump)
+
         # create model preds
         hand_preds = model.predict_proba(hand_df)
         st.text(hand_preds)

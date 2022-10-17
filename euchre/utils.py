@@ -738,6 +738,7 @@ class EuchreGame:
         :param cards_played_this_hand: List of all cards played this hand
         :param unplayed_trump_this_hand: List of unplayed trump cards this hand
         :param verbose: True/False to print out log statements
+
         :returns cards_in_play, player_led
         """
         cards_in_play = {}
@@ -983,3 +984,80 @@ class EuchreGame:
         print_if_verbose(f'Total hands played {self.hands_played}', verbose=verbose)
         if return_all_hands_results:
             return all_hand_results
+
+
+class EuchreHand:
+    """
+    Main class for hand in Euchre game
+    """
+    def __init__(self,
+                 dealer=None,
+                 next_to_deal=None,
+                 player_hand=None
+                 ):
+        if dealer is None:
+            dealer = 'p1'
+        if next_to_deal is None:
+            next_to_deal = ['p2', 'p3', 'p4', 'p1']
+        if player_hand is None:
+            player_hand = ['9_D', '9_H', 'T_H', '9_C', '9_S']
+
+        self.dealer = dealer
+        self.next_to_deal = next_to_deal
+        self.player_hand = player_hand
+
+    @staticmethod
+    def deal_hand(player_hand):
+        """
+        Function to deal rest of cards for hand
+
+        :returns player_hands dict, card_flipped_up
+        """
+        deck_of_cards = ['9_S',
+                         '9_C',
+                         '9_H',
+                         '9_D',
+                         'T_S',
+                         'T_C',
+                         'T_H',
+                         'T_D',
+                         'J_S',
+                         'J_C',
+                         'J_H',
+                         'J_D',
+                         'Q_S',
+                         'Q_C',
+                         'Q_H',
+                         'Q_D',
+                         'K_S',
+                         'K_C',
+                         'K_H',
+                         'K_D',
+                         'A_S',
+                         'A_C',
+                         'A_H',
+                         'A_D']
+        for card in player_hand:
+            deck_of_cards.remove(card)
+
+        rng = np.random.default_rng()
+        numbers = rng.choice(16, size=16, replace=False)
+        player_hands = {'p1': player_hand,
+                        'p2': [deck_of_cards[numbers[i]] for i in range(0, 5)],
+                        'p3': [deck_of_cards[numbers[i]] for i in range(5, 10)],
+                        'p4': [deck_of_cards[numbers[i]] for i in range(10, 15)]}
+        return player_hands, deck_of_cards[numbers[15]]
+
+    @classmethod
+    def play_hand(cls):
+        """
+        Function to play full hand
+        """
+        player_hands, card_flipped_up = cls.deal_hand(player_hand=cls.player_hand)
+
+        # choose trump
+        calling_player = 'p2'
+        trump = 'D'
+
+        print(calling_player)
+        print(trump)
