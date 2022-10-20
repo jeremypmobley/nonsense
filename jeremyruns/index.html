@@ -1,74 +1,44 @@
 
 
-<html xmlns="http://www.w3.org/1999/xhtml" >
-<head>
-    <title>jeremyruns.com</title>
-    <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
-</head>
-<body>
-    <h1>Welcome to jeremyruns.com</h1>
+    <html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>jeremyruns.com</title>
+        <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
+    </head>
 
-    <h2>Last Run: (07/19) - 4.0 miles</h2>
     
-    Updated as of (07/20)
+    <style>
 
-    <h2>Last 30 days: 14 runs, 46.7% of days, 62.2 miles, 2.07 miles/day, 4.44 miles/run </h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_31_days_MA_over_time.png">
+    h1 {text-align: center;}
 
-    <h2>Last 180 days: 82 runs, 45.6% of days, 420.2 miles, 2.33 miles/day, 5.12 miles/run</h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_180_days_MA_over_time.png">
+    .center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: 50%;
+    }
 
-    <h2>Last 365 days: 148 runs, 40.5% of days, 720.9 miles, 1.98 miles/day, 4.87 miles/run</h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_365_days_MA_over_time.png">
-
-
-    <h3>Total days of data tracked: 3288</h3>
-    <h3>Total miles run: 4885.6</h3>
+    </style>
     
-    <form id="contact-form" class="post-reply" method="post">
+
+    <body>
+        <h1>JEREMYRUNS.COM</h1>
+
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png" class="center">
+
+        <h4>Last Run: (10/18) - 4.0 miles (treadmill 36min)</h4>
+
+        <h4>Updated as of (10/20)</h4>
+
+        <p></p>
+
+        <a href="https://jeremyruns.com/jeremyruns_architecture.html">Site Architecture Diagram</a>
+
+        <p></p>
+
+        <a href="https://github.com/jeremypmobley/nonsense/tree/master/jeremyruns">GitHub Code Repo</a>
+
+    </body>
+    </html>
+
     
-       <span>Date</span>
-       <input id="form-date" class="input" type="text" name="date" placeholder="Date">
-
-       <span>Miles</span>
-       <input id="form-miles" class="input" type="text" name="miles" placeholder="Miles Run">
-
-       <textarea id="form-notes" class="input" name="notes" placeholder="Notes"></textarea>
-
-      <button class="primary-button" onClick="submitToAPI(event)">Submit</button>
-    </form>
-
-</body>
-</html>
-
-
-<script>
-  function invokeAWSAPI(e) {
-       e.preventDefault();           
-       var date = $("#form-date").val();
-       var miles = $("#form-miles").val();
-       var notes = $("#form-notes").val();
-       var data = {
-          date : date,
-          miles : miles,
-          notes : notes
-        };
-$.ajax({
-         type: "POST",
-         url : "https://*************.us-east-1.amazonaws.com/dev/contact-us",
-         dataType: "json",
-         crossDomain: "true",
-         contentType: "application/json; charset=utf-8",
-         data: JSON.stringify(data),
-         success: function () {
-           alert("Successful");
-           document.getElementById("contact-form").reset();
-       location.reload();
-         },
-         error: function () {
-           alert("unsuccessful");
-         }});
-     }
- </script>
- 
-

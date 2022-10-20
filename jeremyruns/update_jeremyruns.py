@@ -2,8 +2,8 @@
 Script to update jeremyruns.com website
 
 Runs from local nonsense/jeremyruns directory path
-Reads data in from csv in s3
-Writes html and png files to s3
+Reads data in from csv in s3 - daily_run_log.csv from bucket jeremyruns.com
+Writes html and png file to s3 for static hosting
 
 """
 
@@ -12,7 +12,6 @@ import datetime
 import pandas as pd
 import boto3
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def calc_runstats(df: pd.DataFrame, num_days_back):
@@ -63,20 +62,59 @@ def create_last_run_text(df):
     return last_run_text
 
 
-def create_MA_over_time_chart_upload_s3(df, num_days_back, s3_resource_bucket):
-    """ Function to create and save chart of MA over past num_days_back from df """
-    sns.set(rc={'figure.figsize':(15,10)})
-    sns.scatterplot(data=df.tail(num_days_back), x = "Date", y = "Miles")
-    sns.lineplot(x='Date', y='value', hue='variable',
-                 data=pd.melt(df.tail(num_days_back)[['Date', 'MA_30day', 'MA_10day']], 'Date'))
-    plt.title(f'Last {num_days_back} days')
-    plt.legend(['MA_30day', 'MA_10day'])
-    file_name = f'last_{num_days_back}_days_MA_over_time.png'
-    plt.savefig(file_name)  # save png file locally
-    # upload to s3
-    s3_resource_bucket.upload_file(file_name, file_name, ExtraArgs={'ContentType': 'image/png'})
+def create_all_charts(df, s3_resource_bucket):
+    """ Function to create all charts in one single png """
+
+    fig, ax = plt.subplots(4, 1, figsize=(10, 20))
+
+    days_back = 30
+    ax[0].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_30day'])
+    ax[0].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_10day'])
+    ax[0].scatter(df.tail(days_back)['Date'], df.tail(days_back)['Miles'])
+    ax[0].legend(['MA_30day', 'MA_10day'])
+    ax[0].set_ylabel('Miles')
+    text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
+    ax[0].set_title(f'{text_summary}')
+    ax[0].title.set_size(16)
+
+    days_back = 90
+    ax[1].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_30day'])
+    ax[1].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_10day'])
+    ax[1].scatter(df.tail(days_back)['Date'], df.tail(days_back)['Miles'])
+    ax[1].legend(['MA_30day', 'MA_10day'])
+    ax[1].set_ylabel('Miles')
+    text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
+    ax[1].set_title(f'{text_summary}')
+    ax[1].title.set_size(16)
+
+    days_back = 365
+    ax[2].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_30day'])
+    ax[2].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_10day'])
+    ax[2].scatter(df.tail(days_back)['Date'], df.tail(days_back)['Miles'])
+    ax[2].legend(['MA_30day', 'MA_10day'])
+    ax[2].set_ylabel('Miles')
+    text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
+    ax[2].set_title(f'{text_summary}')
+    ax[2].title.set_size(16)
+
+    days_back = 3650
+    ax[3].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_30day'])
+    ax[3].plot(df.tail(days_back)['Date'], df.tail(days_back)['MA_10day'])
+    ax[3].scatter(df.tail(days_back)['Date'], df.tail(days_back)['Miles'])
+    ax[3].legend(['MA_30day', 'MA_10day'])
+    ax[3].set_ylabel('Miles')
+    text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
+    ax[3].set_title(f'{text_summary}')
+    ax[3].title.set_size(16)
+
+    fig.tight_layout(pad=3.0)
+
+    fig.savefig('all_charts.png')
+
+    s3_resource_bucket.upload_file(f'all_charts.png', f'all_charts.png',
+                                   ExtraArgs={'ContentType': 'image/png'})
     # remove local file
-    os.remove(file_name)
+    os.remove(f'all_charts.png')
 
 
 def preprocess_raw_df(df_) -> pd.DataFrame:
@@ -84,64 +122,84 @@ def preprocess_raw_df(df_) -> pd.DataFrame:
     df_ = (df_
            .assign(Date=pd.to_datetime(df_["Date"]))  # Make Date a datetime object
            .assign(Miles=lambda x: df_['Miles'].fillna(0))  # Fill missing miles with 0
-           .assign(MA_10day=df_['Miles'].rolling(window=10).mean())  # Create rolling averages
-           .assign(MA_30day=df_['Miles'].rolling(window=30).mean())
+           # .assign(MA_10day=df_['Miles'].rolling(window=10).mean())  # Create rolling averages
+           # .assign(MA_30day=df_['Miles'].rolling(window=30).mean())
            .sort_values('Date')
            )
     return df_
 
 
 def main():
+    """
+    Main function to run update process
+
+    :return: None
+    """
+
     # Read in data from s3
     bucket = "jeremyruns.com"
     file_name = "daily_run_log.csv"
-
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=bucket, Key=file_name)
     raw_data_df = pd.read_csv(obj['Body'])
     print(f'Records read in: {raw_data_df.shape[0]}')
 
+    # Process data, create rolling averages
     df = raw_data_df.copy()
     df = df.pipe(preprocess_raw_df)
-    # Remove days in future
     df = df[df['Date'] < datetime.datetime.today()]
+    df['MA_10day'] = df['Miles'].rolling(window=10).mean()
+    df['MA_30day'] = df['Miles'].rolling(window=30).mean()
 
     last_run_text = create_last_run_text(df)
     site_last_updated = datetime.datetime.now().strftime('(%m/%d)')
-    last_30_text = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=30))
-    last_180_text = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=180))
-    last_365_text = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=365))
-    all_data_text = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=df.shape[0]))
+
+    style_text = """
+    <style>
+
+    h1 {text-align: center;}
+
+    .center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: 50%;
+    }
+
+    </style>
+    """
 
     html_string = f"""
 
-<html xmlns="http://www.w3.org/1999/xhtml" >
-<head>
-    <title>jeremyruns.com</title>
-    <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
-</head>
-<body>
-    <h1>Welcome to jeremyruns.com</h1>
+    <html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>jeremyruns.com</title>
+        <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
+    </head>
 
-    <h2>{last_run_text}</h2>
+    {style_text}
 
-    Updated as of {site_last_updated}
+    <body>
+        <h1>JEREMYRUNS.COM</h1>
 
-    <h2>{last_30_text}</h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_31_days_MA_over_time.png">
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png" class="center">
 
-    <h2>{last_180_text}</h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_180_days_MA_over_time.png">
+        <h4>{last_run_text}</h4>
 
-    <h2>{last_365_text}</h2>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_365_days_MA_over_time.png">
+        <h4>Updated as of {site_last_updated}</h4>
 
-    <h2>{all_data_text}</h2>
+        <p></p>
 
-</body>
-</html>
+        <a href="https://jeremyruns.com/jeremyruns_architecture.html">Site Architecture Diagram</a>
 
-"""
+        <p></p>
+
+        <a href="https://github.com/jeremypmobley/nonsense/tree/master/jeremyruns">GitHub Code Repo</a>
+
+    </body>
+    </html>
+
+    """
 
     # Creating an HTML file
     html_file = open("index.html", "w")
@@ -157,10 +215,8 @@ def main():
     print('Upload index file')
     bucket.upload_file('index.html', 'index.html', ExtraArgs={'ContentType': 'text/html'})
 
-    print('Create, upload image files to s3')
-    create_MA_over_time_chart_upload_s3(df=df, num_days_back=31, s3_resource_bucket=bucket)
-    create_MA_over_time_chart_upload_s3(df=df, num_days_back=180, s3_resource_bucket=bucket)
-    create_MA_over_time_chart_upload_s3(df=df, num_days_back=365, s3_resource_bucket=bucket)
+    print('Create, upload image file to s3')
+    create_all_charts(df=df, s3_resource_bucket=bucket)
 
 
 if __name__ == '__main__':
