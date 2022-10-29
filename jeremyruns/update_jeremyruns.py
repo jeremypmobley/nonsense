@@ -8,10 +8,38 @@ Writes html and png file to s3 for static hosting
 """
 
 import os
+from io import StringIO
 import datetime
 import pandas as pd
 import boto3
+import gspread
+from gspread_dataframe import get_as_dataframe
 import matplotlib.pyplot as plt
+
+
+BUCKET = "jeremyruns.com"
+
+
+def move_data_google_sheets_to_s3():
+    """ Function to copy data from Google sheets daily run log to s3 """
+
+    # Set up service account object
+    service_account = gspread.service_account()
+    sheet = service_account.open("Workout log")
+    worksheet = sheet.get_worksheet(0)
+    # Pull down worksheet as dataframe
+    raw_df = get_as_dataframe(worksheet,
+                              parse_dates=True,
+                              usecols=[0, 1, 2],
+                              skiprows=None)
+    _df = raw_df[pd.notnull(raw_df['Date'])]
+
+    # Write dataframe to s3
+    file_name = "daily_run_log.csv"
+    csv_buffer = StringIO()
+    _df.to_csv(csv_buffer)
+    s3_resource = boto3.resource('s3')
+    s3_resource.Object(BUCKET, file_name).put(Body=csv_buffer.getvalue())
 
 
 def calc_runstats(df: pd.DataFrame, num_days_back):
@@ -111,10 +139,10 @@ def create_all_charts(df, s3_resource_bucket):
 
     fig.savefig('all_charts.png')
 
-    s3_resource_bucket.upload_file(f'all_charts.png', f'all_charts.png',
+    s3_resource_bucket.upload_file('all_charts.png', 'all_charts.png',
                                    ExtraArgs={'ContentType': 'image/png'})
     # remove local file
-    os.remove(f'all_charts.png')
+    os.remove('all_charts.png')
 
 
 def preprocess_raw_df(df_) -> pd.DataFrame:
@@ -136,22 +164,24 @@ def main():
     :return: None
     """
 
-    # Read in data from s3
-    bucket = "jeremyruns.com"
+    print('Moving data from google sheets to s3')
+    move_data_google_sheets_to_s3()
+
+    print('Read in data from s3')
     file_name = "daily_run_log.csv"
-    s3 = boto3.client('s3')
-    obj = s3.get_object(Bucket=bucket, Key=file_name)
+    s3_client = boto3.client('s3')
+    obj = s3_client.get_object(Bucket=BUCKET, Key=file_name)
     raw_data_df = pd.read_csv(obj['Body'])
     print(f'Records read in: {raw_data_df.shape[0]}')
 
     # Process data, create rolling averages
-    df = raw_data_df.copy()
-    df = df.pipe(preprocess_raw_df)
-    df = df[df['Date'] < datetime.datetime.today()]
-    df['MA_10day'] = df['Miles'].rolling(window=10).mean()
-    df['MA_30day'] = df['Miles'].rolling(window=30).mean()
+    _df = raw_data_df.copy()
+    _df = _df.pipe(preprocess_raw_df)
+    _df = _df[_df['Date'] < datetime.datetime.today()]
+    _df['MA_10day'] = _df['Miles'].rolling(window=10).mean()
+    _df['MA_30day'] = _df['Miles'].rolling(window=30).mean()
 
-    last_run_text = create_last_run_text(df)
+    last_run_text = create_last_run_text(_df)
     site_last_updated = datetime.datetime.now().strftime('(%m/%d)')
 
     style_text = """
@@ -210,13 +240,13 @@ def main():
 
     # Upload files to s3
     s3_resource = boto3.resource('s3')
-    bucket = s3_resource.Bucket('jeremyruns.com')
+    bucket = s3_resource.Bucket(BUCKET)
 
     print('Upload index file')
     bucket.upload_file('index.html', 'index.html', ExtraArgs={'ContentType': 'text/html'})
 
     print('Create, upload image file to s3')
-    create_all_charts(df=df, s3_resource_bucket=bucket)
+    create_all_charts(df=_df, s3_resource_bucket=bucket)
 
 
 if __name__ == '__main__':
