@@ -18,24 +18,16 @@ An html doc showing the architecture involved in supporting jeremyruns.com
 
 
 ## Next steps:
+* Update architecture diagram with new process details
 * Clean up repo to only include files listed
   * Create /dev folder
-  * Check in all new code from notebook, files
 * Clean up code
+  * Move index.html to separate file
   * Move step to move data from google sheets to s3 to separate file
-  * Make index.html static, remove steps to update
-  * Move functions to create charts to separate utils file
-  * Move step to invalidate Cloudfront distribution to separate file
   * Move step to move chart to s3 to separate function
+  * Move functions to create charts to separate utils file
 * Charts
-  * Add space between charts so full index labels show
-  * Make label rotation same across all charts
-  * Daily chart - Add labels on bars
-  * Daily chart - show xtick labels for each day
-  * Daily chart - fix title size
-  * Weekly chart - remove 2023-52 wk final data point
   * Weekly chart - update xlabels to be date to start week
-* Add metrics between charts
+* Add text of metrics between charts in html
 * Add calendar daily box heat map
   * https://pythonhosted.org/calmap/
-* 

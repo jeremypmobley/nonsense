@@ -98,16 +98,18 @@ def create_last2wks_charts(df: pd.DataFrame, s3_resource_bucket):
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     plt.xticks(rotation=60)
-    ax.bar(daily_plot_df['Date'], daily_plot_df['Miles'])
-    ax.plot(daily_plot_df['Date'], daily_plot_df['MA_10day'], color='green')
+    ax.bar(daily_plot_df['date_str_label'], daily_plot_df['Miles'])
+    ax.set_xticks(daily_plot_df['date_str_label'])
+    ax.plot(daily_plot_df['date_str_label'], daily_plot_df['MA_10day'], color='green')
     ax.legend(['MA_10day'])
     ax.set_ylabel('Miles')
     text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
     ax.set_title(f'{text_summary}')
-    ax.title.set_size(16)
-
+    for i in range(days_back):
+        plt.text(i,
+                 daily_plot_df['Miles'][i] + 0.1,
+                 round(daily_plot_df['Miles'][i], 1), ha='center')
     fig.savefig('last_2wks_daily.png')
-
     s3_resource_bucket.upload_file('last_2wks_daily.png', 'last_2wks_daily.png',
                                    ExtraArgs={'ContentType': 'image/png'})
     # remove local file
@@ -118,12 +120,13 @@ def create_wkly_miles_chart(wkly_sum_df: pd.DataFrame, s3_resource_bucket: objec
     """ Function to create weekly miles chart """
     wkly_plot_df = wkly_sum_df.tail(13).reset_index()
 
-    fig, ax = plt.subplots(1,1, figsize=(8,5))
-    plt.xticks(rotation=45)
+    fig, ax = plt.subplots(1, 1, figsize=(8,5))
+    plt.xticks(rotation=60)
     ax.set_title('Miles Per Week past quarter')
     ax.set_ylabel('Miles')
     ax.bar(wkly_plot_df['yr_wk'],wkly_plot_df['wklyavg'])
     ax.plot(wkly_plot_df['yr_wk'], wkly_plot_df['3wks_rolling'], color='green')
+    ax.legend(['3 wk rolling avg'])
     for i in range(len(wkly_plot_df['yr_wk'])):
         plt.text(i,
                  wkly_plot_df['wklyavg'][i]+0.2,
@@ -139,13 +142,13 @@ def create_monthly_miles_chart(monthly_sum_df, s3_resource_bucket):
     """ Function to create monthly miles chart """
     month_plot_df = monthly_sum_df.tail(12).reset_index()
 
-    fig, ax = plt.subplots(1,1, figsize=(8,5))
-    plt.xticks(rotation=45)
+    fig, ax = plt.subplots(1, 1, figsize=(8,5))
+    plt.xticks(rotation=60)
     ax.set_title('Miles Per Month past year')
     ax.set_ylabel('Miles')
     ax.bar(month_plot_df['yr_month'], month_plot_df['miles_sum'])
     ax.plot(month_plot_df['yr_month'], month_plot_df['3mo_rolling'], color='green')
-    ax.legend(['3_month_rolling_avg'])
+    ax.legend(['3 month rolling avg'])
     for i in range(len(month_plot_df['yr_month'])):
         plt.text(i,
                  month_plot_df['miles_sum'][i]+0.8,
@@ -159,10 +162,10 @@ def create_monthly_miles_chart(monthly_sum_df, s3_resource_bucket):
 
 def create_yearly_miles_chart(yrly_sum_df, s3_resource_bucket):
     """ Function to create yearly miles chart """
-    fig, ax = plt.subplots(1,1, figsize=(8,5))
-    plt.xticks(rotation=45)
+    fig, ax = plt.subplots(1, 1, figsize=(8,5))
+    plt.xticks(rotation=60)
     ax.set_title('Miles Per Year')
-    ax.bar(yrly_sum_df['Date'],yrly_sum_df['miles_sum'])
+    ax.bar(yrly_sum_df['Date'], yrly_sum_df['miles_sum'])
     for i in range(len(yrly_sum_df['Date'])):
         plt.text(i,
                  yrly_sum_df['miles_sum'][i]+5,
@@ -264,6 +267,7 @@ def main():
     _df = _df[_df['Date'] < datetime.datetime.today()]
     _df['MA_10day'] = _df['Miles'].rolling(window=10).mean()
     _df['MA_30day'] = _df['Miles'].rolling(window=30).mean()
+    _df['date_str_label'] = _df['Date'].dt.strftime('%b-%d')
 
     last_run_text = create_last_run_text(_df)
     print(f'Last run: {last_run_text}')
@@ -273,13 +277,107 @@ def main():
     style_text = """
     <style>
 
-    h1 {text-align: center;}
+    h1 {
+        text-align: center;
+    }
+    h2 {text-align: center;}
+    h3 {text-align: center;}
+
+    a:hover {
+        color: rgb(179, 179, 179);
+    }
 
     .center {
       display: block;
       margin-left: auto;
       margin-right: auto;
       width: 50%;
+    }
+
+    body {
+        font-family: "Lato", sans-serif;
+        background-color: #DFF2FF;
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        }
+
+    header {
+      background-color: #3366ff;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      max-width: 100%;
+      height: 40px;
+      align-items: center;
+    }
+
+    header a {
+      text-decoration: none;
+      color: #fff;
+    }
+
+    header a:hover {
+        background-color: #668cff;
+    }
+
+    .left-links {
+      display: flex;
+    }
+
+    .left-links a {
+      color: #fff;
+      margin-right: 20px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .right-links {
+      display: flex;
+    }
+
+    .right-links a {
+      color: #fff;
+      margin-right: 30px;
+      font-weight: bold;
+    }
+
+    .right-links a:last-child {
+      margin-right: 30px;
+    }
+
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 30px;
+        padding: 30px 30px;
+    }
+
+    .image-grid img {
+        width: 100%;
+        height: auto;
+    }
+
+    .image-wrapper {
+        position: relative;
+    }
+
+    .image-wrapper img {
+        width: 100%;
+        height: auto;
+    }
+
+    .caption {
+        position: absolute;
+        top: -35px;
+        left: 0;
+        width: 100%;
+        color: black;
+        padding: 5px;
+        font-size: 24px;
+        text-align: center;
+        font-weight: bold;
     }
 
     </style>
@@ -295,21 +393,54 @@ def main():
 
     {style_text}
 
-    <body>
-        <h1>JEREMYRUNS.COM</h1>
 
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_2wks_daily.png" class="center">
-        <p></p>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/weekly_miles.png" class="center">
-        <p></p>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/monthly_miles.png" class="center">
-        <p></p>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yrly_miles.png" class="center">
-        <p></p>
+    <header>
+
+      <div class="left-links">
+        <a href="https://jeremyruns.com/">JEREMYRUNS.COM</a>
+      </div>
+
+      <!--
+      <div class="right-links">
+        <a href="#">About Jeremy</a>
+        <a href="#">Enter Data</a>
+      </div>
+      -->
+
+    </header>
+
+    <body>
+        <!--  <h1>JEREMYRUNS.COM</h1>  -->
+
+        <div class="image-grid">
+          <div class="image-wrapper">
+            <div class="caption">DAILY</div>
+            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_2wks_daily.png"
+                  alt="DAILY">
+          </div>
+          <div class="image-wrapper">
+              <div class="caption">WEEKLY</div>
+              <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/weekly_miles.png"
+                  alt="WEEKLY">
+          </div>
+          <div class="image-wrapper">
+            <div class="caption">MONTHLY</div>
+            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/monthly_miles.png"
+                  alt="MONTHLY"> 
+          </div>
+          <div class="image-wrapper">
+            <div class="caption">YEARLY</div>
+            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yrly_miles.png"
+                  alt="YEARLY">
+          </div>
+        </div>
+
+
+        <h3>Scatter plot charts</h3>
         <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png" class="center">
 
         <h4 align='center'>{last_run_text}</h4>
-    
+
         <h4 align='center'>Updated as of {site_last_updated}</h4>
 
         <p></p>
@@ -353,6 +484,7 @@ def main():
     wkly_sum_df = _df.groupby(_df['yr_wk']).agg(wklyavg=('Miles', 'sum')).reset_index()
     wkly_sum_df['6wks_rolling'] = wkly_sum_df['wklyavg'].rolling(window=6).mean()
     wkly_sum_df['3wks_rolling'] = wkly_sum_df['wklyavg'].rolling(window=3).mean()
+    wkly_sum_df = wkly_sum_df[wkly_sum_df['yr_wk'] <= datetime.datetime.now().strftime("%Y-%V")]
     create_wkly_miles_chart(wkly_sum_df=wkly_sum_df, s3_resource_bucket=bucket)
 
     print('Create monthly miles chart')
@@ -365,22 +497,6 @@ def main():
     print('Create yrly chart')
     yrly_sum_df = _df.groupby(_df['Date'].dt.strftime('%Y')).agg(miles_sum=('Miles', 'sum')).reset_index()
     create_yearly_miles_chart(yrly_sum_df=yrly_sum_df, s3_resource_bucket=bucket)
-
-    print('Invalidate index.html file in Cloudfront distribution')
-    cloudfront_client = boto3.client('cloudfront')
-    caller_reference = 'index_' + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    cloudfront_client.create_invalidation(
-        DistributionId='E1Z8D0K5RUED85',
-        InvalidationBatch={
-            'Paths': {
-                'Quantity': 1,
-                'Items': [
-                    '/index.html',
-                ]
-            },
-            'CallerReference': caller_reference
-        }
-    )
 
 
 if __name__ == '__main__':
