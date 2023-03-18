@@ -18,11 +18,11 @@ An html doc showing the architecture involved in supporting jeremyruns.com
 
 
 ## Next steps:
-* Update architecture diagram with new process details
-* Clean up repo to only include files listed
+* Clean up repo
+  * Only include files listed
   * Create /dev folder
+  * Add html files to repo
 * Clean up code
-  * Move index.html to separate file
   * Move step to move data from google sheets to s3 to separate file
   * Move step to move chart to s3 to separate function
   * Move functions to create charts to separate utils file
@@ -31,3 +31,10 @@ An html doc showing the architecture involved in supporting jeremyruns.com
 * Add text of metrics between charts in html
 * Add calendar daily box heat map
   * https://pythonhosted.org/calmap/
+
+
+
+### AWS Lambda
+#### pip install pandas matplotlib fsspec tox tox-conda gspread gspread_dataframe
+
+

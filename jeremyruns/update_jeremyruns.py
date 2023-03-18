@@ -97,14 +97,17 @@ def create_last2wks_charts(df: pd.DataFrame, s3_resource_bucket):
     daily_plot_df = df.tail(days_back).reset_index()
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
-    plt.xticks(rotation=60)
+    plt.xticks(rotation=45)
     ax.bar(daily_plot_df['date_str_label'], daily_plot_df['Miles'])
     ax.set_xticks(daily_plot_df['date_str_label'])
     ax.plot(daily_plot_df['date_str_label'], daily_plot_df['MA_10day'], color='green')
     ax.legend(['MA_10day'])
     ax.set_ylabel('Miles')
-    text_summary = create_metrics_text_from_dict(calc_runstats(df=df, num_days_back=days_back))
-    ax.set_title(f'{text_summary}')
+    title = ax.set_title(f'Miles Per Day (past two weeks)', pad=20)
+    title.set_weight('bold')
+    title.set_size(16)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     for i in range(days_back):
         plt.text(i,
                  daily_plot_df['Miles'][i] + 0.1,
@@ -120,13 +123,17 @@ def create_wkly_miles_chart(wkly_sum_df: pd.DataFrame, s3_resource_bucket: objec
     """ Function to create weekly miles chart """
     wkly_plot_df = wkly_sum_df.tail(13).reset_index()
 
-    fig, ax = plt.subplots(1, 1, figsize=(8,5))
-    plt.xticks(rotation=60)
-    ax.set_title('Miles Per Week past quarter')
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    plt.xticks(rotation=45)
+    title = ax.set_title('Miles Per Week (past quarter)', pad=20)
+    title.set_weight('bold')
+    title.set_size(16)
     ax.set_ylabel('Miles')
     ax.bar(wkly_plot_df['yr_wk'],wkly_plot_df['wklyavg'])
     ax.plot(wkly_plot_df['yr_wk'], wkly_plot_df['3wks_rolling'], color='green')
     ax.legend(['3 wk rolling avg'])
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     for i in range(len(wkly_plot_df['yr_wk'])):
         plt.text(i,
                  wkly_plot_df['wklyavg'][i]+0.2,
@@ -142,13 +149,17 @@ def create_monthly_miles_chart(monthly_sum_df, s3_resource_bucket):
     """ Function to create monthly miles chart """
     month_plot_df = monthly_sum_df.tail(12).reset_index()
 
-    fig, ax = plt.subplots(1, 1, figsize=(8,5))
-    plt.xticks(rotation=60)
-    ax.set_title('Miles Per Month past year')
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    plt.xticks(rotation=45)
+    title = ax.set_title('Miles Per Month (past year)', pad=20)
+    title.set_weight('bold')
+    title.set_size(16)
     ax.set_ylabel('Miles')
     ax.bar(month_plot_df['yr_month'], month_plot_df['miles_sum'])
     ax.plot(month_plot_df['yr_month'], month_plot_df['3mo_rolling'], color='green')
     ax.legend(['3 month rolling avg'])
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     for i in range(len(month_plot_df['yr_month'])):
         plt.text(i,
                  month_plot_df['miles_sum'][i]+0.8,
@@ -162,10 +173,14 @@ def create_monthly_miles_chart(monthly_sum_df, s3_resource_bucket):
 
 def create_yearly_miles_chart(yrly_sum_df, s3_resource_bucket):
     """ Function to create yearly miles chart """
-    fig, ax = plt.subplots(1, 1, figsize=(8,5))
-    plt.xticks(rotation=60)
-    ax.set_title('Miles Per Year')
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    plt.xticks(rotation=45)
+    title = ax.set_title('Miles Per Year (past ten years)', pad=20)
+    title.set_weight('bold')
+    title.set_size(16)
     ax.bar(yrly_sum_df['Date'], yrly_sum_df['miles_sum'])
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     for i in range(len(yrly_sum_df['Date'])):
         plt.text(i,
                  yrly_sum_df['miles_sum'][i]+5,
@@ -274,189 +289,18 @@ def main():
     site_last_updated = datetime.datetime.now().strftime('(%m/%d)')
     print(f'Site last updated: {site_last_updated}')
 
-    style_text = """
-    <style>
+    # read in html
+    with open('index_template.html', 'r') as file:
+        html_template_string = file.read()
 
-    h1 {
-        text-align: center;
-    }
-    h2 {text-align: center;}
-    h3 {text-align: center;}
+    # read in css
+    with open('jeremyruns_style.txt', 'r') as file:
+        style_text = file.read()
 
-    a:hover {
-        color: rgb(179, 179, 179);
-    }
-
-    .center {
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-      width: 50%;
-    }
-
-    body {
-        font-family: "Lato", sans-serif;
-        background-color: #DFF2FF;
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        }
-
-    header {
-      background-color: #3366ff;
-      color: #fff;
-      display: flex;
-      justify-content: space-between;
-      padding: 10px;
-      max-width: 100%;
-      height: 40px;
-      align-items: center;
-    }
-
-    header a {
-      text-decoration: none;
-      color: #fff;
-    }
-
-    header a:hover {
-        background-color: #668cff;
-    }
-
-    .left-links {
-      display: flex;
-    }
-
-    .left-links a {
-      color: #fff;
-      margin-right: 20px;
-      font-weight: bold;
-      font-size: 20px;
-    }
-
-    .right-links {
-      display: flex;
-    }
-
-    .right-links a {
-      color: #fff;
-      margin-right: 30px;
-      font-weight: bold;
-    }
-
-    .right-links a:last-child {
-      margin-right: 30px;
-    }
-
-    .image-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        grid-gap: 30px;
-        padding: 30px 30px;
-    }
-
-    .image-grid img {
-        width: 100%;
-        height: auto;
-    }
-
-    .image-wrapper {
-        position: relative;
-    }
-
-    .image-wrapper img {
-        width: 100%;
-        height: auto;
-    }
-
-    .caption {
-        position: absolute;
-        top: -35px;
-        left: 0;
-        width: 100%;
-        color: black;
-        padding: 5px;
-        font-size: 24px;
-        text-align: center;
-        font-weight: bold;
-    }
-
-    </style>
-    """
-
-    html_string = f"""
-
-    <html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-        <title>jeremyruns.com</title>
-        <link rel="icon" type="image/png" href="https://s3.us-east-2.amazonaws.com/jeremyruns.com/favicon.png">
-    </head>
-
-    {style_text}
-
-
-    <header>
-
-      <div class="left-links">
-        <a href="https://jeremyruns.com/">JEREMYRUNS.COM</a>
-      </div>
-
-      <!--
-      <div class="right-links">
-        <a href="#">About Jeremy</a>
-        <a href="#">Enter Data</a>
-      </div>
-      -->
-
-    </header>
-
-    <body>
-        <!--  <h1>JEREMYRUNS.COM</h1>  -->
-
-        <div class="image-grid">
-          <div class="image-wrapper">
-            <div class="caption">DAILY</div>
-            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_2wks_daily.png"
-                  alt="DAILY">
-          </div>
-          <div class="image-wrapper">
-              <div class="caption">WEEKLY</div>
-              <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/weekly_miles.png"
-                  alt="WEEKLY">
-          </div>
-          <div class="image-wrapper">
-            <div class="caption">MONTHLY</div>
-            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/monthly_miles.png"
-                  alt="MONTHLY"> 
-          </div>
-          <div class="image-wrapper">
-            <div class="caption">YEARLY</div>
-            <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yrly_miles.png"
-                  alt="YEARLY">
-          </div>
-        </div>
-
-
-        <h3>Scatter plot charts</h3>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png" class="center">
-
-        <h4 align='center'>{last_run_text}</h4>
-
-        <h4 align='center'>Updated as of {site_last_updated}</h4>
-
-        <p></p>
-
-        <a href="https://jeremyruns.com/jeremyruns_architecture.html" 
-        style="margin: 0 auto; display:block; text-align: center">Site Architecture Diagram</a>
-
-        <p></p>
-
-        <a href="https://github.com/jeremypmobley/nonsense/tree/master/jeremyruns" 
-        style="margin: 0 auto; display:block; text-align: center">GitHub Code Repo</a>
-
-    </body>
-    </html>
-
-    """
+    # Create index.html string
+    html_string = html_template_string.format(style_text=style_text,
+                                              last_run_text=last_run_text,
+                                              site_last_updated=site_last_updated)
 
     # Creating an HTML file
     html_file = open("index.html", "w")
