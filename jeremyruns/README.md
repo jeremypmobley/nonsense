@@ -13,7 +13,8 @@ Development notebook to create and update index.html file and charts
 * jeremyruns_architecture.html  
 An html doc showing the architecture involved in supporting jeremyruns.com
 
-* index.html
+* index_template.html
+* jeremyruns_style.txt
 * favicon.png
 
 
@@ -28,7 +29,7 @@ An html doc showing the architecture involved in supporting jeremyruns.com
   * Move functions to create charts to separate utils file
 * Charts
   * Weekly chart - update xlabels to be date to start week
-* Add text of metrics between charts in html
+* Add text boxes of metrics between charts in html
 * Add calendar daily box heat map
   * https://pythonhosted.org/calmap/
 

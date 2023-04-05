@@ -15,6 +15,7 @@ import boto3
 import gspread
 from gspread_dataframe import get_as_dataframe
 import matplotlib.pyplot as plt
+import calmap
 
 
 BUCKET = "jeremyruns.com"
@@ -61,6 +62,17 @@ def calc_runstats(df: pd.DataFrame, num_days_back: int):
     return runstats_output
 
 
+def calc_textbox_stats(df: pd.DataFrame, num_days_back: int):
+    """
+    Function to calculate text box stats
+    """
+    num_days_run = sum(df.tail(num_days_back)['Miles']>0)
+    tot_miles_run = round(df.tail(num_days_back)['Miles'].sum(),1)
+    miles_per_day = round(tot_miles_run/num_days_back,2)
+    miles_per_run = round(tot_miles_run/num_days_run,2)
+    return num_days_run, tot_miles_run, miles_per_day, miles_per_run
+
+
 def create_metrics_text_from_dict(metrics_dict: dict):
     """
     Function to create text string from metrics dict
@@ -76,17 +88,15 @@ def create_metrics_text_from_dict(metrics_dict: dict):
     return metrics_text_string
 
 
-def create_last_run_text(df: pd.DataFrame):
+def create_last_run_text(df: pd.DataFrame) -> str:
     """ Function to create text about the most recent run from df """
     last_run_date = pd.Timestamp(df[df['Miles'] > 0].tail(1)['Date'].values[0])
     last_run_distance = df[df['Miles'] > 0].tail(1)['Miles'].values[0]
     last_run_notes = df[df['Miles'] > 0].tail(1)['Notes'].values[0]
-
     if pd.isnull(df[df['Miles'] > 0].tail(1)['Notes'].values[0]):
         last_run_text = f"Last Run: {last_run_date.strftime('(%m/%d)')} - {last_run_distance} miles"
     else:
         last_run_text = f"Last Run: {last_run_date.strftime('(%m/%d)')} - {last_run_distance} miles ({last_run_notes})"
-
     return last_run_text
 
 
@@ -247,16 +257,51 @@ def create_all_charts(df: pd.DataFrame, s3_resource_bucket):
     os.remove('all_charts.png')
 
 
-def preprocess_raw_df(df_: pd.DataFrame) -> pd.DataFrame:
-    """ Function to preprocess raw daily data """
-    df_ = (df_
-           .assign(Date=pd.to_datetime(df_["Date"]))  # Make Date a datetime object
-           .assign(Miles=lambda x: df_['Miles'].fillna(0))  # Fill missing miles with 0
-           # .assign(MA_10day=df_['Miles'].rolling(window=10).mean())  # Create rolling averages
-           # .assign(MA_30day=df_['Miles'].rolling(window=30).mean())
-           .sort_values('Date')
-           )
-    return df_
+def create_calmap(df, yr, s3_resource_bucket):
+    """ Function to create calmap plot for given year """
+    calmap_data = pd.Series(df['Miles'].values, index=df['Date'])
+    plt.figure(figsize=(15, 5))
+    plt.title(f'CALENDAR HEATMAP')
+    calmap.yearplot(calmap_data,
+                    year=int(yr),
+                    fillcolor='lightgrey')
+    plt.savefig(f'yr_calmap.png')
+    s3_resource_bucket.upload_file('yr_calmap.png', 'yr_calmap.png',
+                                   ExtraArgs={'ContentType': 'image/png'})
+    # remove local file
+    os.remove('yr_calmap.png')
+
+
+def preprocess_raw_data(df):
+    """
+    Function to preprocess raw dataframe
+    """
+    def convert_date_to_datetime(_df):
+        return _df.assign(Date=pd.to_datetime(_df['Date']))
+
+    def fill_missing_miles_with_zero(_df):
+        return _df.fillna({'Miles': 0})
+
+    def filter_dates_prior_to_today(_df):
+        return _df[_df['Date'] < datetime.datetime.today()]
+
+    def calculate_rolling_averages(_df):
+        _df['MA_10day'] = _df['Miles'].rolling(window=10).mean().fillna(0)
+        _df['MA_30day'] = _df['Miles'].rolling(window=30).mean().fillna(0)
+        return _df.sort_values('Date')
+
+    pipeline = [
+        convert_date_to_datetime,
+        fill_missing_miles_with_zero,
+        filter_dates_prior_to_today,
+        calculate_rolling_averages,
+    ]
+    for func in pipeline:
+        df = func(df)
+
+    df['date_str_label'] = df['Date'].dt.strftime('%b-%d')
+
+    return df
 
 
 def main():
@@ -278,16 +323,15 @@ def main():
 
     # Process data, create rolling averages
     _df = raw_data_df.copy()
-    _df = _df.pipe(preprocess_raw_df)
-    _df = _df[_df['Date'] < datetime.datetime.today()]
-    _df['MA_10day'] = _df['Miles'].rolling(window=10).mean()
-    _df['MA_30day'] = _df['Miles'].rolling(window=30).mean()
-    _df['date_str_label'] = _df['Date'].dt.strftime('%b-%d')
+    _df = preprocess_raw_data(df=_df)
 
     last_run_text = create_last_run_text(_df)
     print(f'Last run: {last_run_text}')
     site_last_updated = datetime.datetime.now().strftime('(%m/%d)')
     print(f'Site last updated: {site_last_updated}')
+
+    print('Calculating text box stats')
+    num_days_run, tot_miles_run, miles_per_day, miles_per_run = calc_textbox_stats(df=_df, num_days_back=14)
 
     # read in html
     with open('index_template.html', 'r') as file:
@@ -300,7 +344,11 @@ def main():
     # Create index.html string
     html_string = html_template_string.format(style_text=style_text,
                                               last_run_text=last_run_text,
-                                              site_last_updated=site_last_updated)
+                                              site_last_updated=site_last_updated,
+                                              runs_last14=num_days_run,
+                                              miles_last14=tot_miles_run,
+                                              miles_per_day_last14=miles_per_day,
+                                              miles_per_run_last14=miles_per_run)
 
     # Creating an HTML file
     html_file = open("index.html", "w")
@@ -341,6 +389,11 @@ def main():
     print('Create yrly chart')
     yrly_sum_df = _df.groupby(_df['Date'].dt.strftime('%Y')).agg(miles_sum=('Miles', 'sum')).reset_index()
     create_yearly_miles_chart(yrly_sum_df=yrly_sum_df, s3_resource_bucket=bucket)
+
+    print('Create calmap chart')
+    create_calmap(df=_df,
+                  yr=str(datetime.datetime.now().strftime("%Y")),
+                  s3_resource_bucket=bucket)
 
 
 if __name__ == '__main__':

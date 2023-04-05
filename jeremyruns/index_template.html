@@ -8,16 +8,9 @@
 {style_text}
 
 <header>
-  <div class="left-links">
+  <div class="header-link">
     <a href="https://jeremyruns.com/">JEREMYRUNS</a>
   </div>
-
-  <!--
-  <div class="right-links">
-    <a href="#">About Jeremy</a>
-    <a href="#">Enter Data</a>
-  </div>
-  -->
 </header>
 
 <body>
@@ -25,29 +18,51 @@
     <div class="image-grid">
       <div class="image-wrapper">
         <div class="caption">DAILY</div>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_2wks_daily.png"
-              alt="DAILY">
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/last_2wks_daily.png" alt="DAILY">
       </div>
       <div class="image-wrapper">
           <div class="caption">WEEKLY</div>
-          <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/weekly_miles.png"
-              alt="WEEKLY">
+          <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/weekly_miles.png" alt="WEEKLY">
       </div>
       <div class="image-wrapper">
         <div class="caption">MONTHLY</div>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/monthly_miles.png"
-              alt="MONTHLY">
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/monthly_miles.png" alt="MONTHLY">
       </div>
       <div class="image-wrapper">
         <div class="caption">YEARLY</div>
-        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yrly_miles.png"
-              alt="YEARLY">
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yrly_miles.png"alt="YEARLY">
       </div>
     </div>
 
+    <div class="row">
+        <div class="box">
+            <span class="box_prompt">Runs last14D: </span>
+            <span class="box_val">{runs_last14}</span>
+        </div>
+        <div class="box">
+            <span class="box_prompt">Miles last14D: </span>
+            <span class="box_val">{miles_last14}</span>
+        </div>
+        <div class="box">
+            <span class="box_prompt">Miles/day: </span>
+            <span class="box_val">{miles_per_day_last14}</span>
+        </div>
+        <div class="box">
+            <span class="box_prompt">Miles/run: </span>
+            <span class="box_val">{miles_per_run_last14}</span>
+        </div>
+    </div>
 
-    <h3>Scatter plot charts</h3>
-    <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png" class="center">
+    <div class="yr_calmap">
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/yr_calmap.png" alt="year_calmap">
+    </div>
+
+    <div class="scatter_plots">
+      <div class="image-wrapper">
+        <h3>Scatter plot charts</h3>
+        <img src="https://s3.us-east-2.amazonaws.com/jeremyruns.com/all_charts.png">
+      </div>
+    </div>
 
     <h4 align='center'>{last_run_text}</h4>
 
@@ -59,7 +74,7 @@
     <div class="purpose_statement">
         This website is built for 3 primary reasons:
         1) Track performance over a very long time
-        2) Showcase wealth of information for a single daily metric
+        2) Showcase wealth of information for a single metric
         3) Playground for AWS Services. s3 static hosted website utilizing Route53, Cloudfront, Certificate Manager, Lambda
     </div>
     <p></p>
