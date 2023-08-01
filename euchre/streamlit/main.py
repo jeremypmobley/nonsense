@@ -16,10 +16,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import joblib
 
-# import sys
-# sys.path.insert(0, 'C:/Users/jerem/Desktop/nonsense/euchre')
-# from utils import *
-
 
 def translate_st_input_to_df(trump,
                              a_s=False, k_s=False, q_s=False, j_s=False, t_s=False, nine_s=False,
@@ -105,18 +101,57 @@ def translate_st_input_to_df(trump,
     return df
 
 
-# TODO: implement this
-def count_suits_st_input(trump: str):
+def count_suits_st_input(trump: str,
+                         a_s=False, k_s=False, q_s=False, j_s=False, t_s=False, nine_s=False,
+                         a_c=False, k_c=False, q_c=False, j_c=False, t_c=False, nine_c=False,
+                         a_d=False, k_d=False, q_d=False, j_d=False, t_d=False, nine_d=False,
+                         a_h=False, k_h=False, q_h=False, j_h=False, t_h=False, nine_h=False):
     """
     :return int of number of suits
     """
     suits = set()
+    if trump == 'HEARTS':
+        if a_h or k_h or q_h or j_h or j_d or t_h or nine_h:
+            suits.add('h')
+        if a_d or k_d or q_d or t_d or nine_d:
+            suits.add('d')
+        if a_s or k_s or q_s or j_s or t_s or nine_s:
+            suits.add('s')
+        if a_c or k_c or q_c or j_c or t_c or nine_c:
+            suits.add('c')
+    if trump == 'SPADES':
+        if a_h or k_h or q_h or j_h or t_h or nine_h:
+            suits.add('h')
+        if a_d or k_d or q_d or j_d or t_d or nine_d:
+            suits.add('d')
+        if a_s or k_s or q_s or j_s or j_c or t_s or nine_s:
+            suits.add('s')
+        if a_c or k_c or q_c or t_c or nine_c:
+            suits.add('c')
+    if trump == 'CLUBS':
+        if a_h or k_h or q_h or j_h or t_h or nine_h:
+            suits.add('h')
+        if a_d or k_d or q_d or j_d or t_d or nine_d:
+            suits.add('d')
+        if a_s or k_s or q_s or t_s or nine_s:
+            suits.add('s')
+        if a_c or k_c or q_c or j_c or j_s or t_c or nine_c:
+            suits.add('c')
+    if trump == 'DIAMONDS':
+        if a_h or k_h or q_h or t_h or nine_h:
+            suits.add('h')
+        if a_d or k_d or q_d or j_d or j_h or t_d or nine_d:
+            suits.add('d')
+        if a_s or k_s or q_s or j_s or t_s or nine_s:
+            suits.add('s')
+        if a_c or k_c or q_c or j_c or t_c or nine_c:
+            suits.add('c')
     return len(suits)
 
 
 def bar_chart(expected_tricks_taken):
     num_tricks_taken = ['0 - zero', '1 - one', '2 - two', '3 - three', '4 - four', '5 - five']
-    fig = plt.figure(figsize = (10, 5))
+    fig = plt.figure(figsize=(10, 5))
     plt.bar(num_tricks_taken, expected_tricks_taken)
     plt.xlabel("Tricks taken")
     plt.ylabel("Percent of hands")
@@ -195,7 +230,11 @@ def main():
                                            a_d=a_d, k_d=k_d, q_d=q_d, j_d=j_d, t_d=t_d, nine_d=nine_d,
                                            a_h=a_h, k_h=k_h, q_h=q_h, j_h=j_h, t_h=t_h, nine_h=nine_h)
         hand_df['player_seat'] = player_position
-        hand_df['num_suits'] = count_suits_st_input(trump=select_trump)
+        hand_df['num_suits'] = count_suits_st_input(trump=select_trump,
+                                                    a_s=a_s, k_s=k_s, q_s=q_s, j_s=j_s, t_s=t_s, nine_s=nine_s,
+                                                    a_c=a_c, k_c=k_c, q_c=q_c, j_c=j_c, t_c=t_c, nine_c=nine_c,
+                                                    a_d=a_d, k_d=k_d, q_d=q_d, j_d=j_d, t_d=t_d, nine_d=nine_d,
+                                                    a_h=a_h, k_h=k_h, q_h=q_h, j_h=j_h, t_h=t_h, nine_h=nine_h)
 
         # create model preds
         hand_preds = model.predict_proba(hand_df)
