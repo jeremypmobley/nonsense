@@ -1,7 +1,6 @@
-"""Helper utility functions"""
 
 import copy
-import numpy as np
+from utils.strategy_utils import play_random_card
 from utils import CARD_VALUES, TRUMP_HIERARCHY_DICT, TEAM_ASSIGNMENTS
 import random
 
@@ -10,31 +9,6 @@ def print_if_verbose(thing_to_print, verbose=False, **kwargs):
     """ Function to print if verbose is True """
     if verbose:
         print(thing_to_print, **kwargs)
-
-
-class Deck:
-    def __init__(self):
-        suits = ['S', 'C', 'H', 'D']
-        values = ['9', 'T', 'J', 'Q', 'K', 'A']
-        self.cards = [value + '_' + suit for value in values for suit in suits]
-
-    def shuffle(self):
-        return random.shuffle(self.cards)
-
-    def deal_hand(self):
-        """
-        Function to deal cards for hand
-        :returns player_hands dict, card_flipped_up
-        """
-        deck_of_cards = self.cards
-        player_hands = {'p1': [deck_of_cards[i] for i in range(0, 5)],
-                        'p2': [deck_of_cards[i] for i in range(5, 10)],
-                        'p3': [deck_of_cards[i] for i in range(10, 15)],
-                        'p4': [deck_of_cards[i] for i in range(15, 20)]}
-        return player_hands, deck_of_cards[20]
-
-    def __str__(self):
-        return "\n".join(str(card) for card in self.cards)
 
 
 def return_off_suit(suit: str) -> str:
@@ -47,35 +21,37 @@ def return_off_suit(suit: str) -> str:
     return suit_mapping.get(suit, suit)
 
 
-def play_random_card(hand: list,
-                     cards_in_play: dict,
-                     player_led: str,
-                     trump: str):
+def is_card_trump(card: str,
+                  trump: str):
     """
-    Function to play random card from hand
-
-    :returns card
+    Function to return if given card is trump
+    :param: card
+    :param: trump
+    :returns True/False
     """
-    if len(hand) == 1:
-        return hand[0]
-    if len(cards_in_play) == 0:
-        return np.random.choice(hand)
+    if card[-1] == trump:
+        return True
+    elif return_off_suit(card[-1]) == trump and card[0] == 'J':
+        return True
     else:
-        if return_off_suit(cards_in_play[player_led][-1]) == trump and cards_in_play[player_led][0] == 'J':
-            suit_led = trump
-        else:
-            suit_led = cards_in_play[player_led][-1]
-        eligible_cards = []
-        if suit_led is not None:
-            for card in hand:
-                if card[-1] == suit_led:
-                    eligible_cards.append(card)
-            if len(eligible_cards) > 0:
-                return np.random.choice(eligible_cards)
-            else:
-                return np.random.choice(hand)
-        else:
-            return np.random.choice(hand)
+        return False
+
+
+def get_next_trick_order(trick_winner: str) -> list:
+    """
+    Function to return new next_to_play list after trick is taken
+
+    :param trick_winner: Player that won last trick
+    :returns list of players in order for next trick
+    """
+    if trick_winner == 'p1':
+        return ['p1', 'p2', 'p3', 'p4']
+    if trick_winner == 'p2':
+        return ['p2', 'p3', 'p4', 'p1']
+    if trick_winner == 'p3':
+        return ['p3', 'p4', 'p1', 'p2']
+    if trick_winner == 'p4':
+        return ['p4', 'p1', 'p2', 'p3']
 
 
 def get_highest_nontrump_card(hand: list,
@@ -89,7 +65,7 @@ def get_highest_nontrump_card(hand: list,
     card_to_play_points = -1
     idx_to_return = None
     for idx, card in enumerate(hand):
-        if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):
+        if is_card_trump(card=card, trump=trump):
             continue
         card_points = CARD_VALUES[card[0]]
         if suit is not None:
@@ -109,9 +85,9 @@ def get_lowest_trump_card(hand: list, trump: str):
     Function to return lowest trump card in hand
     Returns None if no trump cards found
     """
-    trump_cards = TRUMP_HIERARCHY_DICT[trump]
-    trump_cards.reverse()
-    for card in trump_cards:
+    trump_cards = copy.deepcopy(TRUMP_HIERARCHY_DICT[trump])
+    reverse_trump_cards = reversed(trump_cards)
+    for card in reverse_trump_cards:
         if card in hand:
             return card
 
@@ -126,7 +102,8 @@ def get_lowest_nontrump_card_in_suit(hand: list,
     card_to_play_points = 9
     idx_to_return = None
     for idx, card in enumerate(hand):
-        if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):
+        # if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):
+        if is_card_trump(card=card, trump=trump):
             continue
         if card[-1] == suit:  # if card is in given suit
             card_points = CARD_VALUES[card[0]]
@@ -169,7 +146,7 @@ def get_lowest_nontrump_card_in_hand(hand: list,
         # count trumps in hand
         num_trumps = 0
         for card in hand:
-            if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):
+            if is_card_trump(card=card, trump=trump):
                 num_trumps += 1
 
         if num_trumps == len(hand):  # only trump left
@@ -179,7 +156,7 @@ def get_lowest_nontrump_card_in_hand(hand: list,
             # get suit counts
             suit_counts = {}
             for card in hand:
-                if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):  # don't count trump
+                if is_card_trump(card=card, trump=trump):  # don't count trump
                     continue
                 if card[-1] in suit_counts.keys():
                     suit_counts[card[-1]] += 1
@@ -208,7 +185,7 @@ def get_lowest_nontrump_card_in_hand(hand: list,
             idx_to_return = 0
             fewest_lower_cards = 6
             for idx, card in enumerate(hand):
-                if card[-1] == trump or (return_off_suit(card[-1]) == trump and card[0] == 'J'):  # don't play trump
+                if is_card_trump(card=card, trump=trump):  # don't play trump
                     continue
                 lower_cards = CARD_VALUES[card[0]]
                 if lower_cards == 0:  # return nontrump 9 immediately
@@ -322,6 +299,125 @@ def swap_dealer_card(card_flipped_up: str,
     return dealer_hand
 
 
+def eval_flipped_card(hand: list,
+                      player: str,
+                      dealer: str,
+                      card_flipped_up: str) -> bool:
+    """
+    Function to evaluate if a player will order up trump
+    If hand has at least 3 trump cards
+
+    :param hand: List of cards in player's hand
+    :param player: Player
+    :param dealer: Dealer of hand
+    :param card_flipped_up: Card flipped card to evaluate
+    :returns True/False
+
+    TODO: check player position, adjust strategy accordingly
+    TODO: assess dealer hand with card_flipped up in it
+    """
+    suit = card_flipped_up[-1]
+
+    trumps = 0
+    for card in hand:
+        if card[-1] == suit:
+            trumps += 1
+
+    # pick up Jack if dealer and 2 trumps
+    if player == dealer and card_flipped_up[0] == 'J' and trumps >= 2:
+        return True
+
+    # if 3 or more trumps
+    return trumps >= 3
+
+
+def choose_open_trump(hand: list,
+                      card_flipped_up: str) -> str:
+    """
+    Function to choose trump after card is turned down
+    If hand has at least 3 trump cards
+
+    :param hand: List of cards in player's hand
+    :param card_flipped_up: Card flipped up
+    :returns trump
+    """
+    # TODO: pass in player/position/strategy to play
+
+    suits_eligible = ['S', 'C', 'H', 'D']
+    suits_eligible.remove(card_flipped_up[-1])
+    for suit in suits_eligible:
+        trumps = 0
+        for card in hand:
+            if card[-1] == suit:
+                trumps += 1
+        if trumps >= 3:
+            return suit
+
+
+def play_lead_card(hand,
+                   trump,
+                   cards_played_this_hand,
+                   verbose=False):
+    """
+    Play lead card
+
+    :param hand: List of cards in player's hand
+    :param trump: Trump called this hand
+    :param cards_played_this_hand: List of cards played in this hand so far
+    :param verbose: True/False to print out log statements
+
+    :return card to play
+    """
+    # TODO: check if opponents don't have any trump left, play any trump in hand
+    # TODO: update this to be of suit least played so far in case of ties, or to partners short-suit
+    # TODO: if highest_non_trump not A -> play into partner's short suit if exists
+    # play highest non-trump
+    highest_non_trump = get_highest_nontrump_card(hand=hand, trump=trump)
+    if highest_non_trump is not None:
+        print_if_verbose(f'Leading with highest non-trump', verbose=verbose, end='- ')
+        return highest_non_trump
+    else:  # only trump left in hand
+        lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
+        if lowest_trump_card is not None:
+            print_if_verbose(f'Leading with lowest trump (only trump left)', verbose=verbose, end='- ')
+            return lowest_trump_card
+
+
+def determine_trick_winner(cards_in_play,
+                           trump,
+                           player_led,
+                           verbose=False) -> str:
+    """
+    Determine winner of trick
+
+    :param cards_in_play: List of cards played this trick
+    :param trump: Trump called this hand
+    :param player_led: Player that led this trick
+    :param verbose: True/False to print out log statements
+    :returns Player that won trick
+    """
+    # check if cards_in_play only has one card, return player that played that card
+    if len(cards_in_play) == 1:
+        return list(cards_in_play.keys())[0]
+
+    # loop over trump cards, highest to lowest
+    for trump_card in TRUMP_HIERARCHY_DICT[trump]:
+        # if in cards_in_play:
+        if trump_card in cards_in_play.values():
+            # return player that played that card
+            winning_player = [k for k, v in cards_in_play.items() if v == trump_card][0]
+            print_if_verbose(f'{winning_player} wins trick', verbose=verbose)
+            return winning_player
+    led_suit = cards_in_play[player_led][-1]
+    for card_val in CARD_VALUES.keys():
+        for card_played in cards_in_play.values():
+            if card_played[0] == card_val and card_played[-1] == led_suit:
+                # return player that played that card
+                winning_player = [k for k, v in cards_in_play.items() if v == card_played][0]
+                print_if_verbose(f'{winning_player} wins trick', verbose=verbose)
+                return winning_player
+
+
 class EuchreGame:
     """
     Main class for euchre game
@@ -331,7 +427,6 @@ class EuchreGame:
                  dealer=None,
                  next_to_deal=None,
                  tm_play_card_strategy=None,
-                 tm_call_trump_strategy=None,
                  hands_played=0):
         if next_to_deal is None:
             next_to_deal = ['p2', 'p3', 'p4', 'p1']
@@ -341,73 +436,12 @@ class EuchreGame:
             dealer = 'p1'
         if tm_play_card_strategy is None:
             tm_play_card_strategy = {'t1': None, 't2': None}
-        if tm_call_trump_strategy is None:
-            tm_call_trump_strategy = {'t1': None, 't2': None}
 
         self.score = score
         self.dealer = dealer
         self.next_to_deal = next_to_deal
         self.hands_played = hands_played
         self.tm_play_card_strategy = tm_play_card_strategy
-        self.tm_call_trump_strategy = tm_call_trump_strategy
-
-    def eval_flipped_card(self,
-                          hand: list,
-                          player: str,
-                          card_flipped_up: str) -> bool:
-        """
-        Function to evaluate if a player will order up trump
-        If hand has at least 3 trump cards
-
-        :param hand: List of cards in player's hand
-        :param player: PLayer
-        :param card_flipped_up: Card flipped card to evaluate
-        :returns True/False
-
-        TODO: check player position, adjust strategy accordingly
-        TODO: assess dealer hand with card_flipped up in it
-        """
-        suit = card_flipped_up[-1]
-        # ALWAYS order up trump - this is insane
-        if self.tm_call_trump_strategy[TEAM_ASSIGNMENTS[player]] == 'always':
-            return True
-
-        trumps = 0
-        for card in hand:
-            if card[-1] == suit:
-                trumps += 1
-
-        # pick up Jack if dealer and 2 trumps
-        if player == self.dealer and card_flipped_up[0] == 'J' and trumps >= 2:
-            return True
-
-        # if 3 or more trumps
-        return trumps >= 3
-
-    def choose_open_trump(self,
-                          hand: list,
-                          player: str,
-                          card_flipped_up: str) -> str:
-        """
-        Function to choose trump after card is turned down
-        If hand has at least 3 trump cards
-
-        :param hand: List of cards in player's hand
-        :param player: PLayer
-        :param card_flipped_up: Card flipped up
-        :returns trump
-        """
-        # TODO: pass in player/position/strategy to play
-
-        suits_eligible = ['S', 'C', 'H', 'D']
-        suits_eligible.remove(card_flipped_up[-1])
-        for suit in suits_eligible:
-            trumps = 0
-            for card in hand:
-                if card[-1] == suit:
-                    trumps += 1
-            if trumps >= 3:
-                return suit
 
     def determine_trump(self,
                         card_flipped_up,
@@ -423,61 +457,21 @@ class EuchreGame:
         :returns calling player, trump suit
         """
         for idx, player in enumerate(self.next_to_deal):
-            if self.eval_flipped_card(hand=player_hands[player],
-                                      player=player,
-                                      card_flipped_up=card_flipped_up):
+            if eval_flipped_card(hand=player_hands[player],
+                                 player=player,
+                                 dealer=self.dealer,
+                                 card_flipped_up=card_flipped_up):
                 trump = card_flipped_up[-1]
                 print_if_verbose(f'Player {player} in seat {idx+1} has chosen {trump} as trump', verbose=verbose)
                 return player, trump
         for idx, player in enumerate(self.next_to_deal):
-            trump = self.choose_open_trump(hand=player_hands[player],
-                                           player=player,
-                                           card_flipped_up=card_flipped_up)
+            trump = choose_open_trump(hand=player_hands[player],
+                                      card_flipped_up=card_flipped_up)
             if trump is not None:
                 print_if_verbose(f'Player {player} in seat {idx+1} has chosen {trump} as trump', verbose=verbose)
                 return player, trump
         else:  # No "F the dealer"
             return None, None
-
-    def play_lead_card(self,
-                       hand,
-                       trump,
-                       cards_played_this_hand,
-                       unplayed_trump_this_hand,
-                       verbose=False):
-        """
-        Play lead card
-
-        :param hand: List of cards in player's hand
-        :param trump: Trump called this hand
-        :param cards_played_this_hand: List of cards played in this hand so far
-        :param unplayed_trump_this_hand: List of unplayed trump cards this hand
-        :param verbose: True/False to print out log statements
-
-        :return card to play
-        """
-        # print_if_verbose(f'Highest trump left: {unplayed_trump_this_hand[0]}', verbose=verbose, end='- ')
-
-        if unplayed_trump_this_hand:  # if there are unplayed trump cards left
-            if unplayed_trump_this_hand[0] in hand:  # always play highest trump card left
-                print_if_verbose(f'Leading with highest trump card remaining', verbose=verbose, end='- ')
-                # print_if_verbose(f'Trump cards remaining {unplayed_trump_this_hand}', verbose=verbose, end='- ')
-                return unplayed_trump_this_hand[0]
-
-        # TODO: check if opponents don't have any trump left, play any trump in hand
-
-        # TODO: update this to be of suit least played so far in case of ties, or to partners short-suit
-        # TODO: if highest_non_trump not A -> play into partner's short suit if exists
-        # play highest non-trump
-        highest_non_trump = get_highest_nontrump_card(hand=hand, trump=trump)
-        if highest_non_trump is not None:
-            print_if_verbose(f'Leading with highest non-trump', verbose=verbose, end='- ')
-            return highest_non_trump
-        else:  # only trump left in hand
-            lowest_trump_card = get_lowest_trump_card(hand=hand, trump=trump)
-            if lowest_trump_card is not None:
-                print_if_verbose(f'Leading with lowest trump (only trump left)', verbose=verbose, end='- ')
-                return lowest_trump_card
 
     def play_card(self,
                   player,
@@ -486,7 +480,6 @@ class EuchreGame:
                   cards_in_play,
                   player_led,
                   cards_played_this_hand,
-                  unplayed_trump_this_hand,
                   verbose=False):
         """
         Function to return card to play in hand
@@ -497,7 +490,6 @@ class EuchreGame:
         :param cards_in_play: Cards currently played this trick
         :param player_led: Player that led
         :param cards_played_this_hand: List of cards played in this hand so far
-        :param unplayed_trump_this_hand: List of unplayed trump cards this hand
         :param verbose: True/False to print out log statements
 
         """
@@ -508,11 +500,10 @@ class EuchreGame:
 
         # lead card
         if len(cards_in_play) < 1:
-            lead_card = self.play_lead_card(hand=hand,
-                                            trump=trump,
-                                            cards_played_this_hand=cards_played_this_hand,
-                                            unplayed_trump_this_hand=unplayed_trump_this_hand,
-                                            verbose=verbose)
+            lead_card = play_lead_card(hand=hand,
+                                       trump=trump,
+                                       cards_played_this_hand=cards_played_this_hand,
+                                       verbose=verbose)
             return lead_card
 
         # cards have been played this trick
@@ -522,10 +513,11 @@ class EuchreGame:
             else:
                 suit_led = cards_in_play[player_led][-1]
             # check current winner is teammate or not
-            current_winning_player = self.determine_trick_winner(cards_in_play=cards_in_play,
-                                                                 trump=trump,
-                                                                 player_led=player_led)
-            print_if_verbose(f'Current winning player {current_winning_player}', verbose=verbose)
+            print_if_verbose(f'Cards in play: {cards_in_play}', verbose=verbose)
+            current_winning_player = determine_trick_winner(cards_in_play=cards_in_play,
+                                                            trump=trump,
+                                                            player_led=player_led)
+            # print_if_verbose(f'Current winning player {current_winning_player}', verbose=verbose)
 
             # teammate winning
             if TEAM_ASSIGNMENTS[player] == TEAM_ASSIGNMENTS[current_winning_player]:
@@ -625,7 +617,6 @@ class EuchreGame:
                    trump,
                    next_to_play_list,
                    cards_played_this_hand,
-                   unplayed_trump_this_hand,
                    verbose=False):
         """
         Function to play one full trick
@@ -634,7 +625,6 @@ class EuchreGame:
         :param trump: Trump called this hand
         :param next_to_play_list: List of players in order to play this trick
         :param cards_played_this_hand: List of all cards played this hand
-        :param unplayed_trump_this_hand: List of unplayed trump cards this hand
         :param verbose: True/False to print out log statements
 
         :returns cards_in_play, player_led
@@ -654,13 +644,9 @@ class EuchreGame:
                                               cards_in_play=cards_in_play,
                                               player_led=player_led,
                                               cards_played_this_hand=cards_played_this_hand,
-                                              unplayed_trump_this_hand=unplayed_trump_this_hand,
                                               verbose=verbose)
 
             print_if_verbose(f'Player {player} plays {card_to_play}', verbose=verbose, end=', ')
-            if card_to_play[-1] == trump:
-                print_if_verbose(f'Unplayed trump this hand: {unplayed_trump_this_hand}', verbose=verbose)
-                unplayed_trump_this_hand.remove(card_to_play)
             # add card_to_play
             cards_in_play[player] = card_to_play
             cards_played_this_hand.append(card_to_play)
@@ -670,41 +656,6 @@ class EuchreGame:
             if len(cards_in_play) == 1:
                 player_led = player
         return cards_in_play, player_led
-
-    def determine_trick_winner(self,
-                               cards_in_play,
-                               trump,
-                               player_led,
-                               verbose=False) -> str:
-        """
-        Determine winner of trick
-
-        :param cards_in_play: List of cards played this trick
-        :param trump: Trump called this hand
-        :param player_led: Player that led this trick
-        :param verbose: True/False to print out log statements
-        :returns Player that won trick
-        """
-        # check if cards_in_play only has one card, return player that played that card
-        if len(cards_in_play) == 1:
-            return list(cards_in_play.keys())[0]
-
-        # loop over trump cards, highest to lowest
-        for trump_card in TRUMP_HIERARCHY_DICT[trump]:
-            # if in cards_in_play:
-            if trump_card in cards_in_play.values():
-                # return player that played that card
-                winning_player = [k for k, v in cards_in_play.items() if v == trump_card][0]
-                print_if_verbose(f'{winning_player} wins trick', verbose=verbose)
-                return winning_player
-        led_suit = cards_in_play[player_led][-1]
-        for card_val in CARD_VALUES.keys():
-            for card_played in cards_in_play.values():
-                if card_played[0] == card_val and card_played[-1] == led_suit:
-                    # return player that played that card
-                    winning_player = [k for k, v in cards_in_play.items() if v == card_played][0]
-                    print_if_verbose(f'{winning_player} wins trick', verbose=verbose)
-                    return winning_player
 
     def update_score(self,
                      trick_winners,
@@ -779,91 +730,6 @@ class EuchreGame:
                     print_if_verbose(f't1 scores 2', verbose=verbose)
         return hand_score
 
-    @staticmethod
-    def get_next_trick_order(trick_winner: str) -> list:
-        """
-        Function to return new next_to_play list after trick is taken
-
-        :param trick_winner: Player that won last trick
-        :returns list of players in order for next trick
-        """
-        if trick_winner == 'p1':
-            return ['p1', 'p2', 'p3', 'p4']
-        if trick_winner == 'p2':
-            return ['p2', 'p3', 'p4', 'p1']
-        if trick_winner == 'p3':
-            return ['p3', 'p4', 'p1', 'p2']
-        if trick_winner == 'p4':
-            return ['p4', 'p1', 'p2', 'p3']
-
-    def play_hand(self,
-                  verbose=False):
-        """
-        Function to play a single hand
-        Applies deal_hand and determine_trump functions, then loops through play_trick 5 times and updates scores
-
-        :param verbose: True/False to print out log statements
-        :returns hand_results dict
-
-        """
-        hand_results = {}
-        # deal cards
-        # player_hands, card_flipped_up = self.deal_hand(verbose=verbose)
-
-        my_deck = Deck()
-        my_deck.shuffle()
-        player_hands, card_flipped_up = my_deck.deal_hand()
-
-        hand_results['player_hands'] = copy.deepcopy(player_hands)
-        # choose trump
-        calling_player, trump = self.determine_trump(card_flipped_up=card_flipped_up, player_hands=player_hands,
-                                                     verbose=verbose)
-
-        if trump is not None:
-            if card_flipped_up[-1] == trump:
-                swap_dealer_card(card_flipped_up=card_flipped_up, dealer_hand=player_hands[self.dealer],
-                                 verbose=verbose)
-            hand_results['calling_player'] = calling_player
-            hand_results['card_flipped_up'] = card_flipped_up
-            hand_results['trump'] = trump
-            hand_results['dealer'] = self.dealer
-            hand_results['next_to_deal'] = self.next_to_deal
-            trick_winners = {p: 0 for p in self.next_to_deal}
-            next_to_play_list = self.next_to_deal
-            cards_played_this_hand = []
-            unplayed_trump_this_hand = copy.deepcopy(TRUMP_HIERARCHY_DICT[trump])
-            for trick in range(5):
-                print_if_verbose(f'Trick {trick}', verbose=verbose, end=': ')
-                print_if_verbose(f'Unplayed trump this hand: {unplayed_trump_this_hand}', verbose=verbose,)
-                cards_in_play, player_led = self.play_trick(player_hands=player_hands,
-                                                            trump=trump,
-                                                            next_to_play_list=next_to_play_list,
-                                                            cards_played_this_hand=cards_played_this_hand,
-                                                            unplayed_trump_this_hand=unplayed_trump_this_hand,
-                                                            verbose=verbose)
-                trick_winner = self.determine_trick_winner(cards_in_play=cards_in_play,
-                                                           trump=trump,
-                                                           player_led=player_led,
-                                                           verbose=verbose)
-                trick_winners[trick_winner] += 1
-                next_to_play_list = self.get_next_trick_order(trick_winner)
-                # print_if_verbose(f'Cards played this hand list {cards_played_this_hand}', verbose=verbose)
-            print_if_verbose(f'Trick winners: {trick_winners}', verbose=verbose, end=' - ')
-
-            # update score
-            hand_score = self.update_score(trick_winners=trick_winners, calling_player=calling_player, verbose=verbose)
-            hand_results['hand_score'] = hand_score
-
-            self.dealer = self.next_to_deal.pop(0)
-            self.next_to_deal.append(self.dealer)
-            hand_results['trick_winners'] = trick_winners
-            return hand_results
-        else:
-            print_if_verbose('Trump not found', verbose=verbose)
-            self.dealer = self.next_to_deal.pop(0)
-            self.next_to_deal.append(self.dealer)
-            return None
-
     def play_full_game(self,
                        return_all_hands_results=False,
                        verbose=False):
@@ -874,90 +740,93 @@ class EuchreGame:
         all_hand_results = []
         while self.score['t1'] < 10 and self.score['t2'] < 10:
             print_if_verbose(f'Hand #{self.hands_played}- Dealer: {self.dealer}', verbose=verbose, end='; ')
-            hand_results = self.play_hand(verbose=verbose)
+            # hand_results = self.play_hand(verbose=verbose)
+            hand_results = Hand(game=self, verbose=verbose).play_hand()
             if hand_results is not None:
                 all_hand_results.append(hand_results)
                 self.hands_played += 1
-
         print_if_verbose(f'Total hands played {self.hands_played}', verbose=verbose)
         if return_all_hands_results:
             return all_hand_results
 
 
-# # TODO: fix all this
-# class EuchreHand:
-#     """
-#     Main class for hand in Euchre game
-#     """
-#     def __init__(self,
-#                  dealer=None,
-#                  next_to_deal=None,
-#                  player_hand=None
-#                  ):
-#         if dealer is None:
-#             dealer = 'p1'
-#         if next_to_deal is None:
-#             next_to_deal = ['p2', 'p3', 'p4', 'p1']
-#         if player_hand is None:
-#             player_hand = ['9_D', '9_H', 'T_H', '9_C', '9_S']
-#
-#         self.dealer = dealer
-#         self.next_to_deal = next_to_deal
-#         self.player_hand = player_hand
-#
-#     @staticmethod
-#     def deal_hand(player_hand):
-#         """
-#         Function to deal rest of cards for hand
-#
-#         :returns player_hands dict, card_flipped_up
-#         """
-#         deck_of_cards = ['9_S',
-#                          '9_C',
-#                          '9_H',
-#                          '9_D',
-#                          'T_S',
-#                          'T_C',
-#                          'T_H',
-#                          'T_D',
-#                          'J_S',
-#                          'J_C',
-#                          'J_H',
-#                          'J_D',
-#                          'Q_S',
-#                          'Q_C',
-#                          'Q_H',
-#                          'Q_D',
-#                          'K_S',
-#                          'K_C',
-#                          'K_H',
-#                          'K_D',
-#                          'A_S',
-#                          'A_C',
-#                          'A_H',
-#                          'A_D']
-#         for card in player_hand:
-#             deck_of_cards.remove(card)
-#
-#         rng = np.random.default_rng()
-#         numbers = rng.choice(16, size=16, replace=False)
-#         player_hands = {'p1': player_hand,
-#                         'p2': [deck_of_cards[numbers[i]] for i in range(0, 5)],
-#                         'p3': [deck_of_cards[numbers[i]] for i in range(5, 10)],
-#                         'p4': [deck_of_cards[numbers[i]] for i in range(10, 15)]}
-#         return player_hands, deck_of_cards[numbers[15]]
-#
-#     @classmethod
-#     def play_hand(cls):
-#         """
-#         Function to play full hand
-#         """
-#         player_hands, card_flipped_up = cls.deal_hand(player_hand=cls.player_hand)
-#
-#         # choose trump
-#         calling_player = 'p2'
-#         trump = 'D'
-#
-#         print(calling_player)
-#         print(trump)
-# """
+class Hand:
+    def __init__(self, game, verbose):
+        self.hand_results = {}
+        self.game = game
+        self.verbose = verbose
+
+    def play_hand(self):
+        my_deck = Deck()
+        my_deck.shuffle()
+        player_hands, card_flipped_up = my_deck.deal_hand()
+
+        self.hand_results['player_hands'] = copy.deepcopy(player_hands)
+        # choose trump
+        calling_player, trump = self.game.determine_trump(card_flipped_up=card_flipped_up, player_hands=player_hands,
+                                                          verbose=self.verbose)
+
+        if trump is not None:
+            if card_flipped_up[-1] == trump:
+                swap_dealer_card(card_flipped_up=card_flipped_up, dealer_hand=player_hands[self.game.dealer],
+                                 verbose=self.verbose)
+            self.hand_results['calling_player'] = calling_player
+            self.hand_results['card_flipped_up'] = card_flipped_up
+            self.hand_results['trump'] = trump
+            self.hand_results['dealer'] = self.game.dealer
+            self.hand_results['next_to_deal'] = self.game.next_to_deal
+            trick_winners = {p: 0 for p in self.game.next_to_deal}
+            next_to_play_list = self.game.next_to_deal
+            cards_played_this_hand = []
+            for trick in range(5):
+                print_if_verbose(f'Trick {trick}', verbose=self.verbose, end=': ')
+                cards_in_play, player_led = self.game.play_trick(player_hands=player_hands,
+                                                                 trump=trump,
+                                                                 next_to_play_list=next_to_play_list,
+                                                                 cards_played_this_hand=cards_played_this_hand,
+                                                                 verbose=self.verbose)
+                trick_winner = determine_trick_winner(cards_in_play=cards_in_play,
+                                                      trump=trump,
+                                                      player_led=player_led,
+                                                      verbose=self.verbose)
+                trick_winners[trick_winner] += 1
+                next_to_play_list = get_next_trick_order(trick_winner)
+            print_if_verbose(f'Trick winners: {trick_winners}', verbose=self.verbose, end=' - ')
+
+            # update score
+            hand_score = self.game.update_score(trick_winners=trick_winners,
+                                                calling_player=calling_player,
+                                                verbose=self.verbose)
+            self.hand_results['hand_score'] = hand_score
+
+            self.game.dealer = self.game.next_to_deal.pop(0)
+            self.game.next_to_deal.append(self.game.dealer)
+            self.hand_results['trick_winners'] = trick_winners
+            return self.hand_results
+        else:
+            print_if_verbose('Trump not found', verbose=self.verbose)
+            self.game.dealer = self.game.next_to_deal.pop(0)
+            self.game.next_to_deal.append(self.game.dealer)
+            return None
+
+
+class Deck:
+    def __init__(self):
+        suits = ['S', 'C', 'H', 'D']
+        values = ['9', 'T', 'J', 'Q', 'K', 'A']
+        self.cards = [value + '_' + suit for value in values for suit in suits]
+
+    def shuffle(self):
+        return random.shuffle(self.cards)
+
+    def deal_hand(self):
+        """
+        Function to deal cards for hand
+        :returns player_hands dict, card_flipped_up
+        """
+        deck_of_cards = self.cards
+        player_hands = {'p1': [deck_of_cards[i] for i in range(0, 5)],
+                        'p2': [deck_of_cards[i] for i in range(5, 10)],
+                        'p3': [deck_of_cards[i] for i in range(10, 15)],
+                        'p4': [deck_of_cards[i] for i in range(15, 20)]}
+        return player_hands, deck_of_cards[20]
