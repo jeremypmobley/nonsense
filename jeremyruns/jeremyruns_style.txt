@@ -33,7 +33,7 @@ header {
 .image-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-gap: 50px;
+    grid-gap: 40px;
     padding: 50px 30px;  <!-- space between bottom of header and body -->
 }
 
@@ -49,12 +49,12 @@ header {
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
     padding: 5px;
     background-color: white;
-    margin-bottom: 10px;
+    margin-bottom: 0px;
 }
 
 .yr_calmap {
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 10px;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
     padding: 5px;
     background-color: white;
@@ -95,34 +95,40 @@ header {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  padding: 10px;
   margin: 0 auto;
   max-width: 80%;
 }
 
 .box {
   width: 20%;
-  height: 80px;
+  height: 60px;
   padding: 10px;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   text-align: center;
   align-items: center;
-  margin-right: 20px; /* add margin between boxes */
+  margin-right: 20px;   /* add margin between boxes */
     border: 1px solid #ccc;
     border-radius: 5px;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
     padding: 5px;
     background-color: white;
-    margin-bottom: 20px;
 }
 
 .box_prompt {
   font-weight: bold;
   font-size: 1em;
+  margin-bottom: auto;
+  text-align: center;
 }
 
 .box_val {
   font-size: 1.2em;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
 }
 
 </style>

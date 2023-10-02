@@ -8,39 +8,16 @@ Writes html and png file to s3 for static hosting
 """
 
 import os
-from io import StringIO
 import datetime
 import pandas as pd
 import boto3
-import gspread
-from gspread_dataframe import get_as_dataframe
 import matplotlib.pyplot as plt
 import calmap
 
+from utils.helper_functions import move_data_google_sheets_to_s3
+
 
 BUCKET = "jeremyruns.com"
-
-
-def move_data_google_sheets_to_s3():
-    """ Function to copy data from Google sheets daily run log to s3 """
-
-    # Set up service account object
-    service_account = gspread.service_account()
-    sheet = service_account.open("Workout log")
-    worksheet = sheet.get_worksheet(0)
-    # Pull down worksheet as dataframe
-    raw_df = get_as_dataframe(worksheet,
-                              parse_dates=True,
-                              usecols=[0, 1, 2],
-                              skiprows=None)
-    _df = raw_df[pd.notnull(raw_df['Date'])]
-
-    # Write dataframe to s3
-    file_name = "daily_run_log.csv"
-    csv_buffer = StringIO()
-    _df.to_csv(csv_buffer)
-    s3_resource = boto3.resource('s3')
-    s3_resource.Object(BUCKET, file_name).put(Body=csv_buffer.getvalue())
 
 
 def calc_runstats(df: pd.DataFrame, num_days_back: int):
@@ -71,6 +48,15 @@ def calc_textbox_stats(df: pd.DataFrame, num_days_back: int):
     miles_per_day = round(tot_miles_run/num_days_back,2)
     miles_per_run = round(tot_miles_run/num_days_run,2)
     return num_days_run, tot_miles_run, miles_per_day, miles_per_run
+
+
+def calc_prev_df(df: pd.DataFrame, num_days_back):
+    """
+    Function to calculate previous text box stats
+    """
+    prev_df = df.tail(num_days_back*2)
+    prev_df = prev_df.head(num_days_back)
+    return calc_textbox_stats(prev_df, num_days_back)
 
 
 def create_metrics_text_from_dict(metrics_dict: dict):
@@ -332,6 +318,7 @@ def main():
 
     print('Calculating text box stats')
     num_days_run, tot_miles_run, miles_per_day, miles_per_run = calc_textbox_stats(df=_df, num_days_back=14)
+    runs_prev14, miles_prev14, miles_per_day_prev14, miles_per_run_prev14 = calc_prev_df(df=_df, num_days_back=14)
 
     # read in html
     with open('index_template.html', 'r') as file:
@@ -348,7 +335,12 @@ def main():
                                               runs_last14=num_days_run,
                                               miles_last14=tot_miles_run,
                                               miles_per_day_last14=miles_per_day,
-                                              miles_per_run_last14=miles_per_run)
+                                              miles_per_run_last14=miles_per_run,
+                                              runs_prev14=runs_prev14,
+                                              miles_prev14=miles_prev14,
+                                              miles_per_day_prev14=miles_per_day_prev14,
+                                              miles_per_run_prev14=miles_per_run_prev14
+                                              )
 
     # Creating an HTML file
     html_file = open("index.html", "w")
@@ -370,6 +362,7 @@ def main():
     print('Create last_2wks_daily chart')
     create_last2wks_charts(df=_df, s3_resource_bucket=bucket)
 
+    # TODO: update create_wkly_miles_chart, create_monthly_miles_chart to take in _df
     print('Create weekly chart')
     _df['week_of_yr'] = _df['Date'].dt.strftime('%V')
     _df['yr_wk'] = _df['Date'].dt.strftime('%Y') + "-" + _df['week_of_yr']
