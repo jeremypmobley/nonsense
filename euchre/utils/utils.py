@@ -2,6 +2,7 @@
 import copy
 from utils.strategy_utils import play_random_card
 from utils import CARD_VALUES, TRUMP_HIERARCHY_DICT, TEAM_ASSIGNMENTS
+from utils.game_utils import return_off_suit
 import random
 
 
@@ -9,16 +10,6 @@ def print_if_verbose(thing_to_print, verbose=False, **kwargs):
     """ Function to print if verbose is True """
     if verbose:
         print(thing_to_print, **kwargs)
-
-
-def return_off_suit(suit: str) -> str:
-    """
-    Function to return off-suit given suit
-    :param: suit
-    :returns suit
-    """
-    suit_mapping = {'H': 'D', 'D': 'H', 'C': 'S', 'S': 'C'}
-    return suit_mapping.get(suit, suit)
 
 
 def is_card_trump(card: str,

@@ -1,6 +1,9 @@
 
 import numpy as np
-from utils.utils import return_off_suit
+# from utils.utils import return_off_suit
+# from utils import return_off_suit
+# from . import return_off_suit
+from .game_utils import return_off_suit
 
 
 def play_random_card(hand: list,
